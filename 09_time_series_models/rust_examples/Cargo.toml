@@ -1,0 +1,69 @@
+[package]
+name = "crypto_time_series"
+version = "0.1.0"
+edition = "2021"
+description = "Time series analysis for cryptocurrency trading with Bybit data"
+authors = ["ML4Trading"]
+
+[lib]
+name = "crypto_time_series"
+path = "src/lib.rs"
+
+[[bin]]
+name = "fetch_data"
+path = "src/bin/fetch_data.rs"
+
+[[bin]]
+name = "analyze_stationarity"
+path = "src/bin/analyze_stationarity.rs"
+
+[[bin]]
+name = "arima_forecast"
+path = "src/bin/arima_forecast.rs"
+
+[[bin]]
+name = "volatility_analysis"
+path = "src/bin/volatility_analysis.rs"
+
+[[bin]]
+name = "cointegration_test"
+path = "src/bin/cointegration_test.rs"
+
+[[bin]]
+name = "pairs_trading"
+path = "src/bin/pairs_trading.rs"
+
+[dependencies]
+# HTTP and async
+reqwest = { version = "0.11", features = ["json"] }
+tokio = { version = "1.0", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Math and statistics
+nalgebra = "0.32"
+statrs = "0.16"
+
+# Date/time
+chrono = { version = "0.4", features = ["serde"] }
+
+# CLI and output
+clap = { version = "4.0", features = ["derive"] }
+colored = "2.0"
+tabled = "0.14"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# CSV for data storage
+csv = "1.3"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+[dev-dependencies]
+approx = "0.5"
