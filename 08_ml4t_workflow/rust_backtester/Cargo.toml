@@ -1,0 +1,62 @@
+[package]
+name = "rust_backtester"
+version = "0.1.0"
+edition = "2021"
+description = "Modular cryptocurrency backtesting framework with Bybit integration"
+authors = ["ML4T Community"]
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# HTTP client for API calls
+reqwest = { version = "0.11", features = ["json"] }
+
+# JSON serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Date/time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Technical analysis
+ta = "0.5"
+
+# Statistics
+statrs = "0.16"
+
+# Math functions
+libm = "0.2"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# CLI for examples
+clap = { version = "4.4", features = ["derive"] }
+
+# Async traits
+async-trait = "0.1"
+
+# Ring buffer for indicators
+ringbuf = "0.3"
+
+[[example]]
+name = "fetch_data"
+path = "examples/fetch_data.rs"
+
+[[example]]
+name = "simple_backtest"
+path = "examples/simple_backtest.rs"
+
+[[example]]
+name = "sma_crossover"
+path = "examples/sma_crossover.rs"
+
+[[example]]
+name = "ml_signals"
+path = "examples/ml_signals.rs"
