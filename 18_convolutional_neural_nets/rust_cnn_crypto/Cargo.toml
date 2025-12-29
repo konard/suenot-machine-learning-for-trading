@@ -1,0 +1,67 @@
+[package]
+name = "cnn_crypto_trading"
+version = "0.1.0"
+edition = "2021"
+authors = ["ML Trading"]
+description = "CNN-based cryptocurrency trading signals using Bybit data"
+license = "MIT"
+
+[dependencies]
+# HTTP client for Bybit API
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+tokio = { version = "1.35", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Deep Learning (Burn framework - pure Rust)
+burn = { version = "0.14", features = ["train", "wgpu", "autodiff"] }
+burn-ndarray = "0.14"
+
+# Math and arrays
+ndarray = { version = "0.15", features = ["serde"] }
+ndarray-stats = "0.5"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Random for train/test split
+rand = "0.8"
+
+# CSV for data export
+csv = "1.3"
+
+# Progress bars
+indicatif = "0.17"
+
+[dev-dependencies]
+tokio-test = "0.4"
+
+[[bin]]
+name = "train"
+path = "src/bin/train.rs"
+
+[[bin]]
+name = "predict"
+path = "src/bin/predict.rs"
+
+[[bin]]
+name = "fetch_data"
+path = "src/bin/fetch_data.rs"
+
+[[bin]]
+name = "backtest"
+path = "src/bin/backtest.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
