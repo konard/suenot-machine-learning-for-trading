@@ -1,0 +1,70 @@
+[package]
+name = "ml4t-bybit"
+version = "0.1.0"
+edition = "2021"
+authors = ["ML4T Examples"]
+description = "Machine Learning for Trading examples with Bybit cryptocurrency exchange"
+license = "MIT"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# HTTP client
+reqwest = { version = "0.11", features = ["json"] }
+
+# WebSocket
+tokio-tungstenite = { version = "0.21", features = ["native-tls"] }
+futures-util = "0.3"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Cryptography for API signing
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Statistics and math
+statrs = "0.16"
+
+# Environment variables
+dotenv = "0.15"
+
+# URL encoding
+urlencoding = "2.1"
+
+[dev-dependencies]
+tokio-test = "0.4"
+
+[[example]]
+name = "fetch_klines"
+path = "examples/fetch_klines.rs"
+
+[[example]]
+name = "simple_sma_strategy"
+path = "examples/simple_sma_strategy.rs"
+
+[[example]]
+name = "rsi_strategy"
+path = "examples/rsi_strategy.rs"
+
+[[example]]
+name = "backtest_example"
+path = "examples/backtest_example.rs"
+
+[[example]]
+name = "live_ticker"
+path = "examples/live_ticker.rs"
