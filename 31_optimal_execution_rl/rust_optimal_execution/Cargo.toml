@@ -1,0 +1,84 @@
+[package]
+name = "rust_optimal_execution"
+version = "0.1.0"
+edition = "2021"
+authors = ["ML4T Project"]
+description = "Optimal order execution with reinforcement learning for cryptocurrency trading on Bybit"
+license = "MIT"
+repository = "https://github.com/suenot/machine-learning-for-trading"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# HTTP client for Bybit API
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Math and statistics
+ndarray = { version = "0.15", features = ["serde"] }
+ndarray-rand = "0.14"
+rand = "0.8"
+rand_distr = "0.4"
+statrs = "0.16"
+
+# Date/time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# CLI
+clap = { version = "4.4", features = ["derive"] }
+
+# CSV for data storage
+csv = "1.3"
+
+# Environment variables
+dotenv = "0.15"
+
+# Progress bars
+indicatif = "0.17"
+
+# Parallel processing
+rayon = "1.8"
+
+[dev-dependencies]
+tokio-test = "0.4"
+approx = "0.5"
+
+[[bin]]
+name = "fetch_data"
+path = "src/bin/fetch_data.rs"
+
+[[bin]]
+name = "train_agent"
+path = "src/bin/train_agent.rs"
+
+[[bin]]
+name = "evaluate"
+path = "src/bin/evaluate.rs"
+
+[[bin]]
+name = "backtest"
+path = "src/bin/backtest.rs"
+
+[[example]]
+name = "simple_execution"
+path = "examples/simple_execution.rs"
+
+[[example]]
+name = "compare_strategies"
+path = "examples/compare_strategies.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
