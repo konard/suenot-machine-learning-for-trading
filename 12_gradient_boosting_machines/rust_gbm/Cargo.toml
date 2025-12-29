@@ -1,0 +1,61 @@
+[package]
+name = "rust_gbm"
+version = "0.1.0"
+edition = "2021"
+authors = ["ML4Trading Examples"]
+description = "Gradient Boosting for cryptocurrency trading with Bybit data"
+license = "MIT"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# HTTP client for Bybit API
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Gradient Boosting
+smartcore = { version = "0.3", features = ["serde"] }
+
+# Data processing
+ndarray = { version = "0.15", features = ["serde"] }
+polars = { version = "0.35", features = ["lazy", "temporal", "dtype-datetime", "dtype-duration"] }
+
+# Technical analysis
+ta = "0.5"
+
+# Date/Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Configuration
+dotenv = "0.15"
+
+# Statistics
+statrs = "0.16"
+
+[[bin]]
+name = "rust_gbm"
+path = "src/main.rs"
+
+[[example]]
+name = "fetch_data"
+path = "examples/fetch_data.rs"
+
+[[example]]
+name = "train_model"
+path = "examples/train_model.rs"
+
+[[example]]
+name = "backtest"
+path = "examples/backtest.rs"
