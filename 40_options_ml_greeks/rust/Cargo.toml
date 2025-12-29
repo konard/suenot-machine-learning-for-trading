@@ -1,0 +1,93 @@
+[package]
+name = "options-greeks-ml"
+version = "0.1.0"
+edition = "2021"
+authors = ["ML4Trading Team"]
+description = "Options Greeks prediction and delta-neutral volatility trading with Bybit"
+license = "MIT"
+repository = "https://github.com/suenot/machine-learning-for-trading"
+keywords = ["options", "greeks", "volatility", "trading", "crypto", "bybit"]
+categories = ["finance", "algorithms"]
+
+[lib]
+name = "options_greeks_ml"
+path = "src/lib.rs"
+
+[[bin]]
+name = "options-trader"
+path = "src/main.rs"
+
+[[example]]
+name = "calculate_greeks"
+path = "examples/calculate_greeks.rs"
+
+[[example]]
+name = "volatility_forecast"
+path = "examples/volatility_forecast.rs"
+
+[[example]]
+name = "straddle_backtest"
+path = "examples/straddle_backtest.rs"
+
+[[example]]
+name = "bybit_live"
+path = "examples/bybit_live.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# HTTP client for API
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+
+# JSON serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Math and statistics
+statrs = "0.16"
+ndarray = "0.15"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Async traits
+async-trait = "0.1"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Environment variables
+dotenv = "0.15"
+
+# HMAC for API signing
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
+
+# WebSocket for real-time data
+tokio-tungstenite = { version = "0.21", features = ["rustls-tls-webpki-roots"] }
+futures-util = "0.3"
+
+# CSV for data loading
+csv = "1.3"
+
+# Random number generation
+rand = "0.8"
+
+[dev-dependencies]
+tokio-test = "0.4"
+approx = "0.5"
+
+[features]
+default = []
+live-trading = []  # Enable for real trading (disabled by default for safety)
+
+[profile.release]
+opt-level = 3
+lto = true
