@@ -1,0 +1,68 @@
+[package]
+name = "rust_sentiment_momentum"
+version = "0.1.0"
+edition = "2021"
+authors = ["ML Trading Examples"]
+description = "Sentiment-Momentum Fusion strategy for cryptocurrency trading using Bybit data"
+license = "MIT"
+readme = "README.md"
+keywords = ["trading", "sentiment", "momentum", "cryptocurrency", "bybit"]
+
+[dependencies]
+# Async runtime & HTTP
+tokio = { version = "1.40", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Numerical computing
+ndarray = { version = "0.16", features = ["serde"] }
+statrs = "0.17"
+
+# CLI & Logging
+clap = { version = "4.5", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "2.0"
+
+# Utilities
+rand = "0.8"
+csv = "1.3"
+indicatif = "0.17"
+
+# Async utilities
+futures = "0.3"
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3.14"
+approx = "0.5"
+
+[[bin]]
+name = "sentiment_momentum"
+path = "src/main.rs"
+
+[[example]]
+name = "fetch_bybit_data"
+path = "examples/fetch_bybit_data.rs"
+
+[[example]]
+name = "calculate_momentum"
+path = "examples/calculate_momentum.rs"
+
+[[example]]
+name = "sentiment_signals"
+path = "examples/sentiment_signals.rs"
+
+[[example]]
+name = "full_strategy"
+path = "examples/full_strategy.rs"
