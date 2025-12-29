@@ -1,0 +1,59 @@
+[package]
+name = "bayesian_crypto_trading"
+version = "0.1.0"
+edition = "2021"
+authors = ["ML for Trading"]
+description = "Bayesian machine learning examples for cryptocurrency trading with Bybit data"
+license = "MIT"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# HTTP client for Bybit API
+reqwest = { version = "0.11", features = ["json"] }
+
+# JSON serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Math and statistics
+nalgebra = "0.32"
+statrs = "0.16"
+rand = "0.8"
+rand_distr = "0.4"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# CLI and output
+clap = { version = "4.4", features = ["derive"] }
+tabled = "0.15"
+colored = "2.1"
+
+# Progress bars
+indicatif = "0.17"
+
+[[bin]]
+name = "conjugate_priors"
+path = "src/bin/conjugate_priors.rs"
+
+[[bin]]
+name = "bayesian_sharpe"
+path = "src/bin/bayesian_sharpe.rs"
+
+[[bin]]
+name = "pairs_trading"
+path = "src/bin/pairs_trading.rs"
+
+[[bin]]
+name = "stochastic_volatility"
+path = "src/bin/stochastic_volatility.rs"
+
+[lib]
+name = "bayesian_crypto"
+path = "src/lib.rs"
