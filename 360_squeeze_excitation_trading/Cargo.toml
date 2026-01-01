@@ -1,0 +1,66 @@
+[package]
+name = "se_trading"
+version = "0.1.0"
+edition = "2021"
+authors = ["ML Trading Course"]
+description = "Squeeze-and-Excitation Networks for Algorithmic Trading with Bybit Integration"
+license = "MIT"
+readme = "README.md"
+keywords = ["trading", "machine-learning", "squeeze-excitation", "cryptocurrency", "bybit"]
+categories = ["science", "algorithms"]
+
+[lib]
+name = "se_trading"
+path = "src/lib.rs"
+
+[[example]]
+name = "basic_se"
+path = "examples/basic_se.rs"
+
+[[example]]
+name = "bybit_live"
+path = "examples/bybit_live.rs"
+
+[[example]]
+name = "backtest"
+path = "examples/backtest.rs"
+
+[dependencies]
+# Math and arrays
+ndarray = "0.15"
+ndarray-rand = "0.14"
+rand = "0.8"
+
+# Async runtime and HTTP client
+tokio = { version = "1.0", features = ["full"] }
+reqwest = { version = "0.11", features = ["json"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Date/time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# CSV parsing for data
+csv = "1.3"
+
+[dev-dependencies]
+approx = "0.5"
+tokio-test = "0.4"
+
+[features]
+default = []
+full = []
+
+[profile.release]
+opt-level = 3
+lto = true
