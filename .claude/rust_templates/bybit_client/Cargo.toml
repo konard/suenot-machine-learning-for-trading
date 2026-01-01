@@ -1,0 +1,37 @@
+[package]
+name = "bybit_client"
+version = "0.1.0"
+edition = "2021"
+authors = ["ML Trading Examples"]
+description = "Reusable Bybit API client for cryptocurrency market data"
+license = "MIT"
+keywords = ["bybit", "cryptocurrency", "trading", "api", "client"]
+
+[dependencies]
+# HTTP client
+reqwest = { version = "0.12", features = ["json"] }
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging
+log = "0.4"
+
+[dev-dependencies]
+tokio-test = "0.4"
+env_logger = "0.11"
+
+[lib]
+name = "bybit_client"
+path = "src/lib.rs"
