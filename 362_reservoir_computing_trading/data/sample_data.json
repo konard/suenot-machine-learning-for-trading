@@ -1,0 +1,22 @@
+{
+  "description": "Sample BTCUSDT kline data for testing",
+  "symbol": "BTCUSDT",
+  "interval": "1h",
+  "note": "This is sample data. For real backtesting, fetch data from Bybit API.",
+  "klines": [
+    {"start_time": 1704067200000, "open": 42500.0, "high": 42800.0, "low": 42400.0, "close": 42650.0, "volume": 1250.5, "turnover": 53312500.0},
+    {"start_time": 1704070800000, "open": 42650.0, "high": 42900.0, "low": 42550.0, "close": 42800.0, "volume": 1180.3, "turnover": 50533400.0},
+    {"start_time": 1704074400000, "open": 42800.0, "high": 43100.0, "low": 42700.0, "close": 42950.0, "volume": 1320.8, "turnover": 56738600.0},
+    {"start_time": 1704078000000, "open": 42950.0, "high": 43200.0, "low": 42850.0, "close": 43100.0, "volume": 1450.2, "turnover": 62513620.0},
+    {"start_time": 1704081600000, "open": 43100.0, "high": 43350.0, "low": 42950.0, "close": 43200.0, "volume": 1380.6, "turnover": 59641920.0},
+    {"start_time": 1704085200000, "open": 43200.0, "high": 43400.0, "low": 43050.0, "close": 43150.0, "volume": 1290.4, "turnover": 55680860.0},
+    {"start_time": 1704088800000, "open": 43150.0, "high": 43300.0, "low": 42900.0, "close": 43000.0, "volume": 1410.7, "turnover": 60660100.0},
+    {"start_time": 1704092400000, "open": 43000.0, "high": 43150.0, "low": 42800.0, "close": 42900.0, "volume": 1520.3, "turnover": 65220870.0},
+    {"start_time": 1704096000000, "open": 42900.0, "high": 43050.0, "low": 42750.0, "close": 42850.0, "volume": 1350.9, "turnover": 57911265.0},
+    {"start_time": 1704099600000, "open": 42850.0, "high": 43000.0, "low": 42700.0, "close": 42950.0, "volume": 1280.5, "turnover": 55005475.0}
+  ],
+  "usage": {
+    "rust": "let data: SampleData = serde_json::from_str(json_str)?;",
+    "python": "data = json.load(open('sample_data.json'))"
+  }
+}
