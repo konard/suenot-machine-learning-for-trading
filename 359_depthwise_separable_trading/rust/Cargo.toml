@@ -1,0 +1,86 @@
+[package]
+name = "depthwise_separable_trading"
+version = "0.1.0"
+edition = "2021"
+authors = ["ML Trading Team"]
+description = "Depthwise Separable Convolutions for Cryptocurrency Trading"
+license = "MIT"
+repository = "https://github.com/suenot/machine-learning-for-trading"
+keywords = ["trading", "neural-networks", "convolution", "cryptocurrency", "bybit"]
+categories = ["science", "finance"]
+
+[lib]
+name = "dsc_trading"
+path = "src/lib.rs"
+
+[[example]]
+name = "fetch_bybit_data"
+path = "examples/fetch_bybit_data.rs"
+
+[[example]]
+name = "run_strategy"
+path = "examples/run_strategy.rs"
+
+[[example]]
+name = "benchmark"
+path = "examples/benchmark.rs"
+
+[[example]]
+name = "live_trading"
+path = "examples/live_trading.rs"
+
+[dependencies]
+# Core numeric computation
+ndarray = { version = "0.15", features = ["rayon"] }
+ndarray-rand = "0.14"
+rand = "0.8"
+rand_distr = "0.4"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Async runtime and HTTP
+tokio = { version = "1.0", features = ["full"] }
+reqwest = { version = "0.11", features = ["json"] }
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging
+log = "0.4"
+env_logger = "0.10"
+
+# Statistics
+statrs = "0.16"
+
+# Parallel processing
+rayon = "1.8"
+
+# Configuration
+config = "0.13"
+
+# Pretty printing for examples
+prettytable-rs = "0.10"
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+tokio-test = "0.4"
+approx = "0.5"
+
+[[bench]]
+name = "convolution_bench"
+harness = false
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3
+
+[profile.bench]
+lto = true
+codegen-units = 1
