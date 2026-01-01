@@ -1,0 +1,60 @@
+[package]
+name = "dilated_conv_trading"
+version = "0.1.0"
+edition = "2021"
+authors = ["ML4Trading"]
+description = "Dilated Convolutions for cryptocurrency trading with Bybit"
+license = "MIT"
+readme = "../README.md"
+
+[dependencies]
+# HTTP client for Bybit API
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Math and arrays
+ndarray = "0.15"
+ndarray-stats = "0.5"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Environment variables
+dotenv = "0.15"
+
+# Random numbers
+rand = "0.8"
+
+[dev-dependencies]
+tokio-test = "0.4"
+approx = "0.5"
+
+[[example]]
+name = "fetch_data"
+path = "examples/fetch_data.rs"
+
+[[example]]
+name = "dilated_conv_demo"
+path = "examples/dilated_conv_demo.rs"
+
+[[example]]
+name = "wavenet_features"
+path = "examples/wavenet_features.rs"
+
+[[example]]
+name = "trading_backtest"
+path = "examples/trading_backtest.rs"
