@@ -1,0 +1,107 @@
+[package]
+name = "esn_trading"
+version = "0.1.0"
+edition = "2021"
+authors = ["ML4Trading Community"]
+description = "Echo State Networks for Cryptocurrency Trading on Bybit"
+license = "MIT"
+repository = "https://github.com/suenot/machine-learning-for-trading"
+keywords = ["esn", "reservoir-computing", "trading", "cryptocurrency", "machine-learning"]
+categories = ["science", "algorithms"]
+
+[dependencies]
+# HTTP client for API requests
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# JSON serialization/deserialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Date and time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Random number generation
+rand = "0.8"
+rand_distr = "0.4"
+
+# Linear algebra and matrix operations
+ndarray = { version = "0.15", features = ["serde"] }
+ndarray-rand = "0.14"
+ndarray-linalg = { version = "0.16", features = ["openblas-static"] }
+
+# Logging
+log = "0.4"
+env_logger = "0.10"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Configuration
+config = "0.13"
+dotenv = "0.15"
+
+# HMAC for API signing
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
+
+# URL encoding
+urlencoding = "2.1"
+
+# Async traits
+async-trait = "0.1"
+
+# Progress bars
+indicatif = "0.17"
+
+# CSV for data export
+csv = "1.3"
+
+# Statistical computations
+statrs = "0.16"
+
+# Serialization for models
+bincode = "1.3"
+
+# Command line argument parsing
+clap = { version = "4.4", features = ["derive"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
+approx = "0.5"
+criterion = "0.5"
+
+[[bin]]
+name = "fetch_data"
+path = "src/bin/fetch_data.rs"
+
+[[bin]]
+name = "train_esn"
+path = "src/bin/train_esn.rs"
+
+[[bin]]
+name = "backtest"
+path = "src/bin/backtest.rs"
+
+[[bin]]
+name = "live_demo"
+path = "src/bin/live_demo.rs"
+
+[[bin]]
+name = "hyperparameter_search"
+path = "src/bin/hyperparameter_search.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
+
+[profile.dev]
+opt-level = 1
+
+[[bench]]
+name = "esn_benchmark"
+harness = false
