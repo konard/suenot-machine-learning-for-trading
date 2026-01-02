@@ -1,0 +1,70 @@
+# InceptionTime Trading Configuration
+
+[data]
+# Bybit API settings
+symbol = "BTCUSDT"
+interval = "15"  # 1, 3, 5, 15, 30, 60, 120, 240, 360, 720, D, W, M
+days_history = 90
+
+# Feature engineering
+window_size = 64
+stride = 1
+features = ["close", "volume", "rsi", "macd", "bb_upper", "bb_lower"]
+
+# Label generation
+prediction_horizon = 4  # candles ahead
+threshold_percent = 0.5  # % change for bullish/bearish classification
+
+[model]
+# InceptionTime architecture
+num_filters = 32
+depth = 6
+kernel_sizes = [10, 20, 40]
+bottleneck_size = 32
+residual_interval = 3
+num_classes = 3
+
+# Ensemble settings
+ensemble_size = 5
+dropout = 0.2
+
+[training]
+# Training parameters
+batch_size = 64
+epochs = 1500
+learning_rate = 0.001
+weight_decay = 0.0001
+
+# Learning rate scheduler
+lr_patience = 50
+lr_decay_factor = 0.5
+
+# Early stopping
+early_stopping_patience = 100
+min_delta = 0.0001
+
+# Train/Val/Test split
+train_ratio = 0.7
+val_ratio = 0.15
+test_ratio = 0.15
+
+[strategy]
+# Trading strategy settings
+min_confidence = 0.6
+max_position_size = 0.2  # 20% of portfolio
+risk_per_trade = 0.02    # 2% risk per trade
+
+# Risk management
+max_drawdown = 0.15      # 15% max drawdown
+daily_loss_limit = 0.03  # 3% daily loss limit
+atr_multiplier = 2.0     # ATR multiplier for stop-loss
+
+[backtest]
+# Backtesting settings
+initial_capital = 100000.0
+commission_rate = 0.001   # 0.1% per trade
+slippage_rate = 0.0005    # 0.05% slippage
+
+[logging]
+level = "info"
+file = "logs/inception_time.log"
