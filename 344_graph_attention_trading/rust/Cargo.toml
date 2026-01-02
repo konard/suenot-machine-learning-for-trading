@@ -1,0 +1,76 @@
+[package]
+name = "gat_trading"
+version = "0.1.0"
+edition = "2021"
+description = "Graph Attention Networks for cryptocurrency trading using Bybit data"
+authors = ["ML Trading Examples"]
+license = "MIT"
+
+[dependencies]
+# HTTP client for API requests
+reqwest = { version = "0.11", features = ["json"] }
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# JSON serialization/deserialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Date and time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Linear algebra and numerical computing
+ndarray = { version = "0.15", features = ["serde"] }
+ndarray-stats = "0.5"
+ndarray-rand = "0.14"
+
+# Random number generation
+rand = "0.8"
+rand_distr = "0.4"
+
+# Statistical functions
+statrs = "0.16"
+
+# CSV handling
+csv = "1.3"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Command line argument parsing
+clap = { version = "4.4", features = ["derive"] }
+
+# Progress bars
+indicatif = "0.17"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Parallel processing
+rayon = "1.8"
+
+# Ordered floats for comparisons
+ordered-float = "4.2"
+
+[[bin]]
+name = "gat_trading"
+path = "src/main.rs"
+
+[[example]]
+name = "fetch_data"
+path = "examples/fetch_data.rs"
+
+[[example]]
+name = "build_graph"
+path = "examples/build_graph.rs"
+
+[[example]]
+name = "train_gat"
+path = "examples/train_gat.rs"
+
+[[example]]
+name = "backtest"
+path = "examples/backtest.rs"
