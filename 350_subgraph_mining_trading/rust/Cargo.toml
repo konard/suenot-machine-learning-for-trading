@@ -1,0 +1,74 @@
+[package]
+name = "subgraph_mining_trading"
+version = "0.1.0"
+edition = "2021"
+authors = ["ML Trading Research"]
+description = "Subgraph mining for cryptocurrency trading strategies"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/suenot/machine-learning-for-trading"
+keywords = ["trading", "graph", "mining", "cryptocurrency", "bybit"]
+categories = ["algorithms", "finance"]
+
+[dependencies]
+# Graph processing
+petgraph = "0.6"
+
+# Async runtime and HTTP
+tokio = { version = "1.35", features = ["full"] }
+reqwest = { version = "0.11", features = ["json"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Math and statistics
+nalgebra = "0.32"
+statrs = "0.16"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Hashing (for pattern signatures)
+rustc-hash = "1.1"
+
+# Logging
+log = "0.4"
+env_logger = "0.10"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Configuration
+config = "0.13"
+
+# Ring buffer for caching
+ringbuf = "0.3"
+
+[dev-dependencies]
+tokio-test = "0.4"
+approx = "0.5"
+criterion = "0.5"
+
+[[example]]
+name = "basic_mining"
+path = "examples/basic_mining.rs"
+
+[[example]]
+name = "bybit_live"
+path = "examples/bybit_live.rs"
+
+[[example]]
+name = "backtest"
+path = "examples/backtest.rs"
+
+[[bench]]
+name = "mining_bench"
+harness = false
+path = "benches/mining_bench.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
