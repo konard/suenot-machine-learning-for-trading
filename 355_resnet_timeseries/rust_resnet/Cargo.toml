@@ -1,0 +1,95 @@
+[package]
+name = "rust_resnet"
+version = "0.1.0"
+edition = "2021"
+authors = ["ML4Trading Community"]
+description = "ResNet for Time Series - Cryptocurrency Price Prediction using Bybit Data"
+license = "MIT"
+repository = "https://github.com/suenot/machine-learning-for-trading"
+
+[dependencies]
+# HTTP client for API requests
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# JSON serialization/deserialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Date and time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Random number generation
+rand = "0.8"
+rand_distr = "0.4"
+
+# Linear algebra and matrix operations
+ndarray = { version = "0.15", features = ["serde"] }
+ndarray-rand = "0.14"
+
+# Logging
+log = "0.4"
+env_logger = "0.10"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Configuration
+config = "0.13"
+dotenv = "0.15"
+
+# HMAC for API signing
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
+
+# URL encoding
+urlencoding = "2.1"
+
+# Async traits
+async-trait = "0.1"
+
+# Progress bars
+indicatif = "0.17"
+
+# CSV for data export
+csv = "1.3"
+
+# Collections
+indexmap = { version = "2.0", features = ["serde"] }
+
+# UUID for unique identifiers
+uuid = { version = "1.6", features = ["v4"] }
+
+# Statistical computations
+statrs = "0.16"
+
+# Ordered floats for sorting
+ordered-float = "4.2"
+
+[dev-dependencies]
+tokio-test = "0.4"
+approx = "0.5"
+
+[[bin]]
+name = "fetch_data"
+path = "src/bin/fetch_data.rs"
+
+[[bin]]
+name = "train_model"
+path = "src/bin/train_model.rs"
+
+[[bin]]
+name = "predict"
+path = "src/bin/predict.rs"
+
+[[bin]]
+name = "backtest"
+path = "src/bin/backtest.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
