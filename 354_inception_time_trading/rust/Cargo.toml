@@ -1,0 +1,71 @@
+[package]
+name = "inception_time_trading"
+version = "0.1.0"
+edition = "2021"
+authors = ["ML Trading Examples"]
+description = "InceptionTime for cryptocurrency time series classification and trading using Bybit data"
+license = "MIT"
+readme = "../README.md"
+
+[dependencies]
+# Deep Learning
+tch = "0.17"  # PyTorch bindings for Rust (libtorch)
+ndarray = { version = "0.16", features = ["serde"] }
+ndarray-rand = "0.15"
+
+# Async runtime & HTTP
+tokio = { version = "1.40", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# CLI & Logging
+clap = { version = "4.5", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "2.0"
+
+# Utilities
+rand = "0.8"
+csv = "1.3"
+indicatif = "0.17"  # Progress bars
+statrs = "0.18"     # Statistical functions
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3.14"
+approx = "0.5"
+
+[[bin]]
+name = "inception_trading"
+path = "src/main.rs"
+
+[[bin]]
+name = "fetch_data"
+path = "src/bin/fetch_data.rs"
+
+[[bin]]
+name = "train"
+path = "src/bin/train.rs"
+
+[[bin]]
+name = "backtest"
+path = "src/bin/backtest.rs"
+
+[[bin]]
+name = "predict"
+path = "src/bin/predict.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
