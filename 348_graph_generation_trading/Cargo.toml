@@ -1,0 +1,62 @@
+[package]
+name = "graph_generation_trading"
+version = "0.1.0"
+edition = "2021"
+authors = ["ML Trading Team"]
+description = "Graph generation and analysis for cryptocurrency trading with Bybit integration"
+license = "MIT"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# HTTP client for Bybit API
+reqwest = { version = "0.11", features = ["json"] }
+
+# JSON serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Math and linear algebra
+nalgebra = "0.32"
+ndarray = "0.15"
+ndarray-stats = "0.5"
+
+# Graph library
+petgraph = "0.6"
+
+# Statistics
+statrs = "0.16"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# Random number generation
+rand = "0.8"
+
+# Environment variables
+dotenv = "0.15"
+
+[dev-dependencies]
+tokio-test = "0.4"
+approx = "0.5"
+
+[[example]]
+name = "basic_graph"
+path = "examples/basic_graph.rs"
+
+[[example]]
+name = "correlation_network"
+path = "examples/correlation_network.rs"
+
+[[example]]
+name = "trading_strategy"
+path = "examples/trading_strategy.rs"
