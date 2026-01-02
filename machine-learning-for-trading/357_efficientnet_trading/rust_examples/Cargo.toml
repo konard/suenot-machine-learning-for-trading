@@ -1,0 +1,108 @@
+[package]
+name = "efficientnet_trading"
+version = "0.1.0"
+edition = "2021"
+authors = ["ML Trading Team"]
+description = "EfficientNet-based cryptocurrency trading using Bybit data"
+license = "MIT"
+readme = "README.md"
+
+[lib]
+name = "efficientnet_trading"
+path = "src/lib.rs"
+
+[[example]]
+name = "fetch_data"
+path = "examples/fetch_data.rs"
+
+[[example]]
+name = "generate_images"
+path = "examples/generate_images.rs"
+
+[[example]]
+name = "train_model"
+path = "examples/train_model.rs"
+
+[[example]]
+name = "realtime_prediction"
+path = "examples/realtime_prediction.rs"
+
+[[example]]
+name = "backtest"
+path = "examples/backtest.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+tokio-tungstenite = { version = "0.21", features = ["native-tls"] }
+futures-util = "0.3"
+
+# HTTP client
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Image processing
+image = "0.24"
+imageproc = "0.23"
+
+# Numerical computing
+ndarray = { version = "0.15", features = ["serde"] }
+ndarray-stats = "0.5"
+
+# Machine learning (using candle for inference)
+candle-core = { version = "0.3", optional = true }
+candle-nn = { version = "0.3", optional = true }
+candle-transformers = { version = "0.3", optional = true }
+
+# Plotting
+plotters = "0.3"
+plotters-bitmap = "0.3"
+
+# Statistics
+statrs = "0.16"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Cryptography for API signing
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
+
+# Async utilities
+async-trait = "0.1"
+
+# Random number generation
+rand = "0.8"
+
+# Rayon for parallel processing
+rayon = "1.8"
+
+# URL encoding
+urlencoding = "2.1"
+
+[dev-dependencies]
+tokio-test = "0.4"
+approx = "0.5"
+
+[features]
+default = []
+cuda = ["candle-core/cuda", "candle-nn/cuda"]
+metal = ["candle-core/metal", "candle-nn/metal"]
+ml = ["candle-core", "candle-nn", "candle-transformers"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
