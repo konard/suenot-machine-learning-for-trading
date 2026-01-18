@@ -1,4 +1,4 @@
-# Chapter 33: Anomaly Detection — Market Regime Detection and Unusual Pattern Recognition
+# Chapter 33: Anomaly Detection — Market Regime Detection, Unusual Pattern Recognition & Tail Risk Hedging
 
 ## Overview
 
@@ -566,19 +566,146 @@ alibi-detect>=0.11.0  # Outlier and drift detection
 - [Hidden Markov Models in Finance](https://www.sciencedirect.com/science/article/pii/S0378426608001987)
 - [PyOD: Python Outlier Detection Library](https://pyod.readthedocs.io/)
 
-## Rust Implementation
+## Rust Implementations
 
-This chapter includes a complete Rust implementation for high-performance anomaly detection on cryptocurrency data from Bybit. See `rust_anomaly_crypto/` directory.
+This chapter includes two Rust implementations:
 
-### Features:
+### 1. Anomaly Detection (`rust_anomaly_crypto/`)
+High-performance anomaly detection on cryptocurrency data from Bybit.
 - Real-time data fetching from Bybit
 - Statistical anomaly detection (Z-score, MAD, IQR)
 - Isolation Forest implementation
 - Online anomaly detection
 - Modular and extensible design
 
+### 2. Risk Hedging (`rust_risk_hedging/`)
+Automated tail risk hedging system.
+- Multi-model anomaly scoring
+- Automatic hedge sizing
+- Portfolio protection logic
+
+---
+
+# Part 2: Tail Risk Hedging Strategy
+
+## Overview
+
+Аномальные рыночные условия часто предшествуют кризисам или резким движениям. Anomaly detection позволяет идентифицировать "необычные" состояния рынка до того, как они станут очевидными. В этой части мы строим систему раннего предупреждения и автоматического хеджирования.
+
+## Hedging Strategy
+
+**Суть стратегии:** Мониторинг multivariate anomaly score. При превышении порога — автоматическая покупка защитных инструментов (VIX calls, put spreads, treasuries).
+
+**Сигнал на хедж:**
+- Anomaly score > 95th percentile → Light hedge (5% portfolio)
+- Anomaly score > 99th percentile → Heavy hedge (15% portfolio)
+
+**Instruments:** VIX calls, SPY puts, TLT longs, Gold
+
+### Hedging Notebooks
+
+| # | Notebook | Description |
+|---|----------|-------------|
+| 1 | `01_market_features.ipynb` | Feature engineering для market state |
+| 2 | `02_historical_crises.ipynb` | Анализ исторических кризисов как ground truth |
+| 3 | `03_threshold_calibration.ipynb` | Калибровка порогов на исторических кризисах |
+| 4 | `04_hedging_instruments.ipynb` | Выбор и pricing защитных инструментов |
+| 5 | `05_hedging_strategy.ipynb` | Автоматическая логика хеджирования |
+| 6 | `06_hedging_backtesting.ipynb` | Backtest с cost-benefit analysis |
+
+### Market Stress Indicators
+
+```
+Market Indicators:
+├── VIX and VIX term structure (VIX, VIX3M, VIX6M)
+├── Credit spreads (HY-IG, TED spread, LIBOR-OIS)
+├── Equity indices (SPY, sector ETFs)
+├── Bond markets (TLT, LQD, HYG)
+├── Currency stress (USD index, JPY, CHF)
+├── Commodity signals (Gold, Oil)
+└── Intermarket correlations
+
+Historical Crisis Dates (Ground Truth):
+├── 2008 Financial Crisis
+├── 2010 Flash Crash
+├── 2011 European Debt Crisis
+├── 2015 China Devaluation
+├── 2018 Volmageddon
+├── 2020 COVID Crash
+└── 2022 Rate Shock
+```
+
+### Hedging Decision Logic
+
+```python
+def hedging_decision(anomaly_score, thresholds, portfolio_value):
+    """
+    Determine hedge size based on anomaly score
+    """
+    if anomaly_score > thresholds['extreme']:  # 99th percentile
+        hedge_pct = 0.15
+        instruments = {
+            'VIX_calls': 0.05,
+            'SPY_puts': 0.05,
+            'TLT': 0.03,
+            'GLD': 0.02
+        }
+    elif anomaly_score > thresholds['high']:  # 95th percentile
+        hedge_pct = 0.05
+        instruments = {
+            'VIX_calls': 0.02,
+            'SPY_puts': 0.02,
+            'TLT': 0.01
+        }
+    else:
+        hedge_pct = 0
+        instruments = {}
+
+    return {k: v * portfolio_value for k, v in instruments.items()}
+```
+
+### Cost-Benefit Analysis
+
+```
+Hedging Costs:
+├── VIX calls: ~3-5% decay per month in contango
+├── SPY puts: theta decay + spread
+├── Opportunity cost: hedge $ not invested
+
+Benefits:
+├── Drawdown reduction during crises
+├── Faster recovery (less capital loss)
+├── Psychological benefit (stay invested)
+
+Optimization:
+├── Minimize: E[hedge_cost] - λ * E[tail_loss_reduction]
+├── Backtest across multiple crises
+└── Find optimal threshold calibration
+```
+
+### Hedging Metrics
+
+- **Detection:** True Positive Rate, False Positive Rate, AUC
+- **Timing:** Days of warning before crisis, False alarms per year
+- **Portfolio:** Max Drawdown with/without hedge, Recovery time
+- **Cost:** Annual hedge cost, Hedge efficiency ratio
+
+## Expected Outcomes (Hedging)
+
+1. **Feature set** из 20+ market stress indicators
+2. **Ensemble model** с calibrated thresholds
+3. **Hedging strategy** с автоматическим execution
+4. **Results:** 30-50% drawdown reduction с < 3% annual cost
+
+## References (Hedging)
+
+- [Tail Risk Hedging](https://www.amazon.com/Tail-Risk-Hedging-Portfolio-Management/dp/0071791752)
+- [Predicting Stock Market Crashes](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2635170)
+
+---
+
 ## Difficulty Level
 
 ⭐⭐⭐⭐☆ (Advanced)
 
-Требуется понимание: Statistics, Machine Learning, Time Series Analysis, Risk Management
+Требуется понимание: Statistics, Machine Learning, Time Series Analysis, Risk Management, Options Pricing, Crisis Analysis
