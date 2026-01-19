@@ -197,7 +197,7 @@ impl Agent for TechnicalAgent {
         let current_rsi = *rsi.last().unwrap_or(&50.0);
 
         // Scoring
-        let mut score = 0;
+        let mut score: i32 = 0;
         let mut reasons = Vec::new();
 
         // RSI analysis
@@ -281,7 +281,7 @@ impl Agent for BullAgent {
         _context: Option<&AnalysisContext>,
     ) -> Result<Analysis> {
         let closes = data.close_prices();
-        let mut confidence_boost = 0.0;
+        let mut confidence_boost: f64 = 0.0;
         let mut reasons = Vec::new();
 
         // Look for bullish signals
@@ -351,7 +351,7 @@ impl Agent for BearAgent {
         _context: Option<&AnalysisContext>,
     ) -> Result<Analysis> {
         let closes = data.close_prices();
-        let mut confidence_boost = 0.0;
+        let mut confidence_boost: f64 = 0.0;
         let mut reasons = Vec::new();
 
         // Look for bearish signals
@@ -456,7 +456,7 @@ impl Agent for RiskManagerAgent {
         }
 
         // Drawdown assessment
-        if max_dd > 0.3 {
+        if max_dd > self.max_drawdown {
             reasons.push(format!(
                 "History of large drawdowns ({:.0}%)",
                 max_dd * 100.0

@@ -120,6 +120,9 @@ impl MarketData {
 
     /// Calculate simple moving average.
     pub fn sma(&self, period: usize) -> Vec<f64> {
+        if period == 0 {
+            return vec![];
+        }
         let closes = self.close_prices();
         if closes.len() < period {
             return vec![];
@@ -133,6 +136,9 @@ impl MarketData {
 
     /// Calculate exponential moving average.
     pub fn ema(&self, period: usize) -> Vec<f64> {
+        if period == 0 {
+            return vec![];
+        }
         let closes = self.close_prices();
         if closes.is_empty() {
             return vec![];
@@ -151,13 +157,16 @@ impl MarketData {
 
     /// Calculate RSI (Relative Strength Index).
     pub fn rsi(&self, period: usize) -> Vec<f64> {
+        if period == 0 {
+            return vec![];
+        }
         let returns = self.returns();
         if returns.len() < period {
             return vec![];
         }
 
-        let mut gains: Vec<f64> = returns.iter().map(|&r| r.max(0.0)).collect();
-        let mut losses: Vec<f64> = returns.iter().map(|&r| (-r).max(0.0)).collect();
+        let gains: Vec<f64> = returns.iter().map(|&r| r.max(0.0)).collect();
+        let losses: Vec<f64> = returns.iter().map(|&r| (-r).max(0.0)).collect();
 
         let mut rsi_values = vec![];
 
@@ -166,13 +175,13 @@ impl MarketData {
             let avg_gain: f64 = gains[i - period..i].iter().sum::<f64>() / period as f64;
             let avg_loss: f64 = losses[i - period..i].iter().sum::<f64>() / period as f64;
 
-            let rs = if avg_loss == 0.0 {
+            // When avg_loss is zero, RSI should be 100 (all gains, no losses)
+            let rsi = if avg_loss == 0.0 {
                 100.0
             } else {
-                avg_gain / avg_loss
+                let rs = avg_gain / avg_loss;
+                100.0 - (100.0 / (1.0 + rs))
             };
-
-            let rsi = 100.0 - (100.0 / (1.0 + rs));
             rsi_values.push(rsi);
         }
 
@@ -181,6 +190,9 @@ impl MarketData {
 
     /// Calculate volatility (standard deviation of returns).
     pub fn volatility(&self, period: usize) -> Vec<f64> {
+        if period == 0 {
+            return vec![];
+        }
         let returns = self.returns();
         if returns.len() < period {
             return vec![];

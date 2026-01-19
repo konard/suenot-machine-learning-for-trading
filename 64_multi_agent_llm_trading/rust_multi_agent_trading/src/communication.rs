@@ -135,7 +135,11 @@ where
     A: Agent,
 {
     /// Create a new debate.
+    ///
+    /// # Panics
+    /// Panics if `num_rounds` is 0.
     pub fn new(bull_agent: B, bear_agent: A, num_rounds: usize) -> Self {
+        assert!(num_rounds > 0, "num_rounds must be > 0");
         Self {
             bull_agent,
             bear_agent,

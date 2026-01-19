@@ -297,7 +297,7 @@ class DebateModerator:
 
         return {
             "signal": signal.value,
-            "confidence": 0.5 + abs(score_diff),
+            "confidence": min(0.5 + abs(score_diff), 1.0),
             "conclusion": conclusion,
             "bull_total_score": bull_total,
             "bear_total_score": bear_total,

@@ -359,19 +359,35 @@ class MultiAgentBacktester:
         prev_equity = self.initial_capital
 
         for i, date in enumerate(dates):
+            current_price = data.loc[date, "close"]
+            self._update_position_prices(symbol, current_price)
+
+            # Record equity and return on every bar for accurate metrics
+            current_equity = self._get_equity()
+            self.equity_history.append((date, current_equity))
+            daily_return = (current_equity / prev_equity - 1) if prev_equity > 0 else 0
+            daily_returns.append(daily_return)
+            prev_equity = current_equity
+
+            # Record position snapshot
+            self.positions_history.append({
+                "date": date,
+                "equity": current_equity,
+                "cash": self.capital,
+                "positions": {
+                    s: {"quantity": p.quantity, "value": p.quantity * p.current_price}
+                    for s, p in self.positions.items()
+                }
+            })
+
             if i % step != 0:
-                # Just update prices, don't trade
-                price = data.loc[date, "close"]
-                self._update_position_prices(symbol, price)
+                # Non-rebalance day - prices updated and equity recorded above
                 continue
 
             # Get lookback window
             window_end = data.index.get_loc(date)
             window_start = window_end - lookback
             window_data = data.iloc[window_start:window_end + 1].copy()
-
-            current_price = data.loc[date, "close"]
-            self._update_position_prices(symbol, current_price)
 
             # Run multi-agent analysis
             try:
@@ -393,26 +409,6 @@ class MultiAgentBacktester:
                 signal = Signal.NEUTRAL
                 confidence = 0.0
                 reasoning = f"Error: {str(e)}"
-
-            # Record equity
-            current_equity = self._get_equity()
-            self.equity_history.append((date, current_equity))
-
-            # Calculate daily return
-            daily_return = (current_equity / prev_equity - 1) if prev_equity > 0 else 0
-            daily_returns.append(daily_return)
-            prev_equity = current_equity
-
-            # Record position snapshot
-            self.positions_history.append({
-                "date": date,
-                "equity": current_equity,
-                "cash": self.capital,
-                "positions": {
-                    s: {"quantity": p.quantity, "value": p.quantity * p.current_price}
-                    for s, p in self.positions.items()
-                }
-            })
 
         # Close any remaining positions at the end
         final_date = dates[-1]

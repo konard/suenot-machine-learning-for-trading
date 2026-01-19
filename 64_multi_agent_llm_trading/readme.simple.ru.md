@@ -313,9 +313,9 @@ class BearAgent:
 
 class TraderAgent:
     def decide(self, opinions):
-        # Считает голоса
-        bullish_count = opinions.count("БЫЧИЙ")
-        bearish_count = opinions.count("МЕДВЕЖИЙ")
+        # Считает голоса (используя поиск подстроки)
+        bullish_count = sum(1 for o in opinions if "БЫЧИЙ" in o)
+        bearish_count = sum(1 for o in opinions if "МЕДВЕЖИЙ" in o)
 
         if bullish_count > bearish_count:
             return "ПОКУПАТЬ"

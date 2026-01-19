@@ -247,16 +247,25 @@ impl<'a> MultiAgentBacktester<'a> {
         let mut prev_equity = self.initial_capital;
 
         for i in lookback..candles.len() {
-            if (i - lookback) % step != 0 {
-                // Just update prices
-                let price = candles[i].close;
-                self.update_position_prices(symbol, price);
-                continue;
-            }
-
             let timestamp = candles[i].timestamp;
             let current_price = candles[i].close;
             self.update_position_prices(symbol, current_price);
+
+            // Record equity and return on every bar for accurate metrics
+            let current_equity = self.get_equity();
+            self.equity_history.push((timestamp, current_equity));
+            let daily_return = if prev_equity > 0.0 {
+                current_equity / prev_equity - 1.0
+            } else {
+                0.0
+            };
+            daily_returns.push(daily_return);
+            prev_equity = current_equity;
+
+            if (i - lookback) % step != 0 {
+                // Non-rebalance bar - prices updated and equity recorded above
+                continue;
+            }
 
             // Create window data
             let window_candles = candles[i.saturating_sub(lookback)..=i].to_vec();
@@ -283,19 +292,6 @@ impl<'a> MultiAgentBacktester<'a> {
             ) {
                 self.trades.push(trade);
             }
-
-            // Record equity
-            let current_equity = self.get_equity();
-            self.equity_history.push((timestamp, current_equity));
-
-            // Calculate daily return
-            let daily_return = if prev_equity > 0.0 {
-                current_equity / prev_equity - 1.0
-            } else {
-                0.0
-            };
-            daily_returns.push(daily_return);
-            prev_equity = current_equity;
         }
 
         // Close remaining positions

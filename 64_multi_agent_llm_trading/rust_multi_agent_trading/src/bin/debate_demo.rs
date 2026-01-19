@@ -3,7 +3,7 @@
 //! This demo shows how to use adversarial debate between agents.
 
 use multi_agent_trading::{
-    agents::{BearAgent, BullAgent},
+    agents::{Agent, BearAgent, BullAgent},
     communication::Debate,
     data::create_mock_data,
 };

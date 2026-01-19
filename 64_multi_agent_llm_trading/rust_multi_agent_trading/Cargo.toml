@@ -69,11 +69,6 @@ strum = { version = "0.25", features = ["derive"] }
 
 [dev-dependencies]
 tokio-test = "0.4"
-criterion = "0.5"
-
-[[bench]]
-name = "agent_benchmark"
-harness = false
 
 [features]
 default = []

@@ -310,9 +310,9 @@ class BearAgent:
 
 class TraderAgent:
     def decide(self, opinions):
-        # Count votes
-        bullish_count = opinions.count("BULLISH")
-        bearish_count = opinions.count("BEARISH")
+        # Count votes (using substring matching)
+        bullish_count = sum(1 for o in opinions if "BULLISH" in o)
+        bearish_count = sum(1 for o in opinions if "BEARISH" in o)
 
         if bullish_count > bearish_count:
             return "BUY"
