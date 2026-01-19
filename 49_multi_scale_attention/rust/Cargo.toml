@@ -1,0 +1,45 @@
+[package]
+name = "multi_scale_attention"
+version = "0.1.0"
+edition = "2021"
+authors = ["Machine Learning for Trading"]
+description = "Multi-Scale Attention for Financial Time Series Prediction"
+license = "MIT"
+
+[dependencies]
+# Neural network and tensor operations
+ndarray = { version = "0.15", features = ["rayon"] }
+ndarray-rand = "0.14"
+rand = "0.8"
+rand_distr = "0.4"
+
+# HTTP client for Bybit API
+reqwest = { version = "0.11", features = ["blocking", "json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Date/time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Parallel processing
+rayon = "1.8"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging
+log = "0.4"
+env_logger = "0.10"
+
+[[bin]]
+name = "example_usage"
+path = "src/bin/example_usage.rs"
+
+[[bin]]
+name = "synthetic_example"
+path = "src/bin/synthetic_example.rs"
+
+[lib]
+name = "multi_scale_attention"
+path = "src/lib.rs"
