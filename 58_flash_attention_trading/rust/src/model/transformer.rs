@@ -148,7 +148,7 @@ pub struct MultiHeadAttention {
 }
 
 impl MultiHeadAttention {
-    pub fn new(d_model: usize, n_heads: usize, use_flash: bool, block_size: usize) -> Self {
+    pub fn new(d_model: usize, n_heads: usize, _use_flash: bool, block_size: usize) -> Self {
         let mut rng = rand::thread_rng();
         let scale = (2.0 / (2 * d_model) as f32).sqrt();
 

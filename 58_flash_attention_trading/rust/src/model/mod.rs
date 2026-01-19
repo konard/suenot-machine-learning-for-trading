@@ -5,7 +5,7 @@
 mod trading;
 mod transformer;
 
-pub use trading::{FlashAttentionTrader, TraderConfig};
+pub use trading::{FlashAttentionTrader, OutputType, TraderConfig};
 pub use transformer::{
     FeedForward, LayerNorm, MultiHeadAttention, PositionalEncoding, TransformerBlock,
     TransformerConfig,

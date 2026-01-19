@@ -7,7 +7,7 @@
 mod flash;
 mod standard;
 
-pub use flash::flash_attention;
+pub use flash::{flash_attention, flash_attention_parallel};
 pub use standard::standard_attention;
 
 use ndarray::Array2;

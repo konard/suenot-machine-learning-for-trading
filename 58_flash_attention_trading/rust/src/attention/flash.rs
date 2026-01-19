@@ -9,7 +9,7 @@
 //! use a CUDA-based library like candle with flash-attention support.
 
 use super::AttentionConfig;
-use ndarray::{s, Array1, Array2, Axis};
+use ndarray::{s, Array1, Array2};
 use rayon::prelude::*;
 
 /// Compute flash-style tiled attention.

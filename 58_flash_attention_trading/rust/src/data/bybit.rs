@@ -4,7 +4,7 @@
 
 use super::OhlcvData;
 use anyhow::{Context, Result};
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{TimeZone, Utc};
 use serde::{Deserialize, Serialize};
 
 /// Kline/candlestick data from Bybit
