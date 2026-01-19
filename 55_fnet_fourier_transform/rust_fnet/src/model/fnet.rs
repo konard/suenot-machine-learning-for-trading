@@ -250,11 +250,18 @@ impl FNet {
 fn create_positional_encoding(max_len: usize, d_model: usize) -> Array2<f64> {
     let mut pe = Array2::zeros((max_len, d_model));
 
+    // Handle both even and odd d_model values
+    let pairs = d_model / 2;
     for pos in 0..max_len {
-        for i in 0..d_model / 2 {
+        for i in 0..pairs {
             let angle = pos as f64 / (10000.0_f64).powf(2.0 * i as f64 / d_model as f64);
             pe[[pos, 2 * i]] = angle.sin();
             pe[[pos, 2 * i + 1]] = angle.cos();
+        }
+        // Handle odd d_model: set last dimension to sin encoding
+        if d_model % 2 == 1 {
+            let angle = pos as f64 / (10000.0_f64).powf(2.0 * pairs as f64 / d_model as f64);
+            pe[[pos, d_model - 1]] = angle.sin();
         }
     }
 

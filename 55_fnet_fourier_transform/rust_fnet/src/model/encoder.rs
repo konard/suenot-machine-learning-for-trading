@@ -209,6 +209,18 @@ fn gelu(x: f64) -> f64 {
 
 /// Apply dropout in place.
 fn apply_dropout_inplace(x: &mut [f64], p: f64) {
+    // Guard against p >= 1.0 to avoid NaN/inf from 1/(1-p)
+    if p <= 0.0 {
+        return; // No dropout
+    }
+    if p >= 1.0 {
+        // Drop everything
+        for val in x.iter_mut() {
+            *val = 0.0;
+        }
+        return;
+    }
+
     let mut rng = rand::thread_rng();
     let scale = 1.0 / (1.0 - p);
 
@@ -223,6 +235,18 @@ fn apply_dropout_inplace(x: &mut [f64], p: f64) {
 
 /// Apply dropout to 3D array.
 fn apply_dropout_3d(x: &mut Array3<f64>, p: f64) {
+    // Guard against p >= 1.0 to avoid NaN/inf from 1/(1-p)
+    if p <= 0.0 {
+        return; // No dropout
+    }
+    if p >= 1.0 {
+        // Drop everything
+        for val in x.iter_mut() {
+            *val = 0.0;
+        }
+        return;
+    }
+
     let mut rng = rand::thread_rng();
     let scale = 1.0 / (1.0 - p);
 

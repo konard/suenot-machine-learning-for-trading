@@ -90,19 +90,21 @@ def main():
         dates = np.arange(n_samples)
         close = 50000 * np.exp(np.cumsum(np.random.randn(n_samples) * 0.01))
 
-        df = {
+        # Create synthetic dataframe with proper pandas DataFrame
+        import pandas as pd
+        df = pd.DataFrame({
             'timestamp': dates,
             'open': close * (1 + np.random.randn(n_samples) * 0.001),
             'high': close * (1 + np.abs(np.random.randn(n_samples)) * 0.01),
             'low': close * (1 - np.abs(np.random.randn(n_samples)) * 0.01),
             'close': close,
             'volume': np.random.exponential(1000, n_samples)
-        }
-        df = calculate_features(type('DataFrame', (), df)())
+        })
+        df = calculate_features(df)
 
-        # Create synthetic dataframe
-        import pandas as pd
-        df = pd.DataFrame({
+        # If calculate_features fails, create synthetic features directly
+        if df.empty or len(df) < 100:
+            df = pd.DataFrame({
             'log_return': np.random.randn(n_samples) * 0.01,
             'volatility': np.random.exponential(0.02, n_samples),
             'volume_ratio': np.random.exponential(1, n_samples),
@@ -116,7 +118,8 @@ def main():
         all_dfs = [df]
 
     # Combine all data
-    combined_df = all_dfs[0] if len(all_dfs) == 1 else all_dfs[0]
+    import pandas as pd
+    combined_df = all_dfs[0] if len(all_dfs) == 1 else pd.concat(all_dfs, ignore_index=True)
 
     print(f"\n2. Creating Sequences...")
 

@@ -30,7 +30,7 @@ fn main() -> Result<()> {
 
     // Create FNet model
     println!("Creating FNet model...");
-    let model = FNet::new(n_features, d_model, n_layers, d_ff, max_seq_len);
+    let mut model = FNet::new(n_features, d_model, n_layers, d_ff, 0.0, max_seq_len, 1);
 
     // Print model info
     println!("  Total parameters: {}", model.num_parameters());
@@ -55,7 +55,7 @@ fn main() -> Result<()> {
 
     // Run forward pass
     println!("Running forward pass...");
-    let output = model.forward(&input);
+    let output = model.forward(&input, false);
     println!("  Output shape: {:?}", output.dim());
 
     // Show sample predictions
@@ -75,7 +75,7 @@ fn main() -> Result<()> {
 
 fn demonstrate_fourier_layer(seq_len: usize, d_model: usize) {
     // Create Fourier layer
-    let fourier_layer = FourierLayer::new();
+    let mut fourier_layer = FourierLayer::new();
 
     // Create sample embedding [batch_size, seq_len, d_model]
     let batch_size = 1;

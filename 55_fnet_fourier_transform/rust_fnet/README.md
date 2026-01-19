@@ -12,7 +12,7 @@ High-performance Rust implementation of FNet (Fourier Neural Network) for crypto
 
 ## Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                        FNet Model                            │
 ├─────────────────────────────────────────────────────────────┤
@@ -147,7 +147,7 @@ cargo run --example backtest -- --symbol ETHUSDT --limit 2000
 
 ## Module Structure
 
-```
+```text
 src/
 ├── lib.rs              # Main exports
 ├── api/

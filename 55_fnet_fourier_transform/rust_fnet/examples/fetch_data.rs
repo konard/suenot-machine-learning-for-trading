@@ -99,6 +99,12 @@ fn print_feature_stats(features: &TradingFeatures) {
     println!("{:-<60}", "");
 
     for (name, values) in stats {
+        // Guard against empty vectors to avoid division by zero
+        if values.is_empty() {
+            println!("{:<20} {:>12} {:>12} {:>12} {:>12}",
+                     name, "N/A", "N/A", "N/A", "N/A");
+            continue;
+        }
         let mean = values.iter().sum::<f64>() / values.len() as f64;
         let std = (values.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / values.len() as f64).sqrt();
         let min = values.iter().cloned().fold(f64::INFINITY, f64::min);

@@ -177,10 +177,12 @@ impl SignalGenerator {
         }
 
         let min_len = self.prediction_history.len().min(self.return_history.len());
+        // Only count as correct when both prediction and return have same non-zero sign
+        // Zero predictions should not be counted as correct by default
         let correct: usize = self.prediction_history[..min_len]
             .iter()
             .zip(self.return_history[..min_len].iter())
-            .filter(|(&p, &r)| (p > 0.0 && r > 0.0) || (p < 0.0 && r < 0.0) || (p == 0.0))
+            .filter(|(&p, &r)| (p > 0.0 && r > 0.0) || (p < 0.0 && r < 0.0))
             .count();
 
         Some(correct as f64 / min_len as f64)

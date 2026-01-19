@@ -11,18 +11,18 @@
 //! ## Example
 //!
 //! ```rust,ignore
-//! use fnet_trading::{FNet, BybitClient, Backtester};
+//! use fnet_trading::{FNet, BybitClient, Backtester, BacktesterConfig};
 //!
-//! // Fetch data
+//! // Fetch data (synchronous API - no .await needed)
 //! let client = BybitClient::new();
-//! let data = client.fetch_klines("BTCUSDT", "60", 1000).await?;
+//! let data = client.fetch_klines("BTCUSDT", "60", 1000)?;
 //!
 //! // Create model
-//! let model = FNet::new(7, 256, 4);
+//! let model = FNet::new(7, 256, 4, 1024, 0.1, 512, 1);
 //!
 //! // Run backtest
-//! let backtester = Backtester::new(100000.0);
-//! let results = backtester.run(&strategy, &data);
+//! let backtester = Backtester::new(BacktesterConfig::default());
+//! let results = backtester.run(&predictions, &prices, &timestamps, signal_config);
 //! ```
 
 pub mod api;

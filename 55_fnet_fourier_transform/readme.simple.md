@@ -20,7 +20,7 @@ When you hear a song, you hear ONE sound. But actually, that sound is made of MA
 
 **Fourier Transform** is like a magic tool that can separate a song into all these different parts!
 
-```
+```text
 Your Favorite Song
       │
       ▼
@@ -65,7 +65,7 @@ Instead of asking everyone individually, just:
 - Take ONE photo of the whole class!
 - Everyone's information is captured at once!
 
-```
+```text
 OLD WAY (Self-Attention):          NEW WAY (FNet):
 
 😊-😊 Check                        📸 SNAP!
@@ -85,7 +85,7 @@ This is why FNet is **80% FASTER** than the old way!
 
 ### Step 1: Convert to Waves
 
-```
+```text
 Stock prices over 7 days:
 Day 1: $100
 Day 2: $102  ↑
@@ -100,7 +100,7 @@ Pattern detected: Up-down-up-down! (Like a wave 🌊)
 
 ### Step 2: Find Hidden Patterns with Fourier Transform
 
-```
+```text
 ┌──────────────────────────────────────────────┐
 │           FOURIER TRANSFORM                  │
 │                                              │
@@ -118,7 +118,7 @@ Pattern detected: Up-down-up-down! (Like a wave 🌊)
 
 ### Step 3: Use Patterns to Predict
 
-```
+```text
 FNet says: "Based on the 2-day cycle, tomorrow should be UP! 📈"
 
 Today: $97 (down day)
@@ -131,7 +131,7 @@ Tomorrow: Probably $100+ (up day based on pattern)
 
 ### Example 1: Temperature Prediction
 
-```
+```text
 PROBLEM: Predict tomorrow's temperature
 
 OLD WAY (Slow):
@@ -149,7 +149,7 @@ Tomorrow: COLD! ❄️
 
 ### Example 2: Your Friend's Mood
 
-```
+```text
 PROBLEM: Predict your friend's mood
 
 Pattern over 2 weeks:
@@ -170,7 +170,7 @@ FNet says: "It's Friday? Your friend will be 🎉 SUPER Happy!"
 
 ### Example 3: Video Game Prices
 
-```
+```text
 PROBLEM: When should you buy a video game?
 
 Price pattern over a year:
@@ -193,7 +193,7 @@ FNet says: "Wait for December to buy!" 🎮
 
 Bitcoin (BTC) and Ethereum (ETH) often move together:
 
-```
+```text
 When Bitcoin goes:      Ethereum usually:
      ↗️ UP                   ↗️ UP
      ↘️ DOWN                 ↘️ DOWN
@@ -209,7 +209,7 @@ FNet predicts:
 
 ### The "Rush Hour" Pattern
 
-```
+```text
 Stock Market Rush Hours:
 9:30 AM - 10:30 AM: BUSY! (everyone buying/selling)
 12:00 PM - 1:00 PM: Slow (lunch time)
@@ -224,7 +224,7 @@ FNet learns these daily patterns and uses them!
 
 ### What Fourier Transform Actually Does
 
-```
+```text
 INPUT: A bumpy line (stock prices)
         _____
        /     \      /\
@@ -243,7 +243,7 @@ you get the original bumpy line back!
 
 ### Why This Helps
 
-```
+```text
 Complex pattern:
 The messy price chart → CONFUSING! 😵
 
@@ -259,7 +259,7 @@ Much easier to understand and predict! 🧠
 
 ## FNet vs Other Models: The Race! 🏁
 
-```
+```text
 SPEED TEST: Who can make predictions fastest?
 
 🐢 Standard Transformer: 100 seconds
@@ -277,7 +277,7 @@ Only 3% less accurate, but SO much faster!
 
 ### When Speed Matters
 
-```
+```text
 Imagine you're trading and the price is about to change:
 
 Standard Transformer thinks: "Hmm, let me carefully analyze..."
@@ -323,7 +323,7 @@ FNet thinks: "UP!"
 ### Activity 1: Find Your Own Patterns
 
 Track the weather for 2 weeks:
-```
+```text
 Day 1: ☀️ Sunny
 Day 2: ☁️ Cloudy
 Day 3: 🌧️ Rainy
@@ -339,7 +339,7 @@ Hint: Look for repeating cycles!
 ### Activity 2: Pattern in Your Day
 
 Track your energy level:
-```
+```text
 7 AM: 😴 Low (just woke up)
 10 AM: ⚡ High (morning energy)
 1 PM: 😴 Low (after lunch)

@@ -18,3 +18,4 @@ tqdm>=4.60.0
 # For Jupyter notebooks (optional)
 jupyter>=1.0.0
 ipywidgets>=7.6.0
+nbconvert>7.16.6  # CVE-2025-53000: Exclude vulnerable versions

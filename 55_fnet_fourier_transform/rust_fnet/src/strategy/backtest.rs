@@ -214,7 +214,10 @@ impl Backtester {
 
                 if should_exit || i == n - 1 {
                     // Calculate trade result
-                    let exit_price = current_price * (1.0 - self.config.slippage);
+                    // Slippage direction depends on position: long exits by selling (negative slippage),
+                    // short exits by buying (positive slippage)
+                    let slippage_sign = if position_size > 0.0 { -1.0 } else { 1.0 };
+                    let exit_price = current_price * (1.0 + slippage_sign * self.config.slippage);
                     let gross_pnl = (exit_price - entry_price) * position_size;
                     let costs = entry_price.abs() * position_size.abs() * self.config.transaction_cost * 2.0;
                     let net_pnl = gross_pnl - costs;
@@ -245,7 +248,10 @@ impl Backtester {
 
             // Check if we should enter new position
             if position.is_none() && signal.is_actionable() {
-                let entry_price = current_price * (1.0 + self.config.slippage);
+                // Slippage direction depends on signal: buy pays higher (positive slippage),
+                // sell pays lower (negative slippage)
+                let slippage_sign = if signal.signal == Signal::Buy { 1.0 } else { -1.0 };
+                let entry_price = current_price * (1.0 + slippage_sign * self.config.slippage);
                 let position_size = if signal.signal == Signal::Buy {
                     config.position_size
                 } else {

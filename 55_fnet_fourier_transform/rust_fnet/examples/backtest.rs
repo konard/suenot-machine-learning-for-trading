@@ -86,19 +86,21 @@ fn main() -> Result<()> {
 
     // Create and "train" model (in real use, you would actually train it)
     println!("Creating FNet model...");
-    let model = FNet::new(
+    let mut model = FNet::new(
         8,    // n_features
         64,   // d_model (smaller for demo)
         2,    // n_layers
         128,  // d_ff
-        args.seq_len,
+        0.0,  // dropout
+        args.seq_len, // max_seq_len
+        1,    // output_dim
     );
     println!("Model parameters: {}", model.num_parameters());
     println!();
 
     // Generate predictions on test set
     println!("Generating predictions...");
-    let predictions = generate_predictions(&model, &test);
+    let predictions = generate_predictions(&mut model, &test);
     println!("Generated {} predictions", predictions.len());
 
     // Run backtest
@@ -178,7 +180,7 @@ fn fetch_real_data(
     symbol: &str,
     interval: &str,
     limit: usize,
-) -> Result<(fnet_trading::TradingFeatures, Vec<f64>, Vec<u64>)> {
+) -> Result<(fnet_trading::TradingFeatures, Vec<f64>, Vec<i64>)> {
     let client = BybitClient::new();
     let klines = client.fetch_klines(symbol, interval, limit)?;
 
@@ -196,7 +198,7 @@ fn fetch_real_data(
     ))
 }
 
-fn generate_synthetic_data(n: usize) -> (fnet_trading::TradingFeatures, Vec<f64>, Vec<u64>) {
+fn generate_synthetic_data(n: usize) -> (fnet_trading::TradingFeatures, Vec<f64>, Vec<i64>) {
     use std::f64::consts::PI;
 
     // Generate synthetic price series with trend and cycles
@@ -218,7 +220,7 @@ fn generate_synthetic_data(n: usize) -> (fnet_trading::TradingFeatures, Vec<f64>
         .iter()
         .enumerate()
         .map(|(i, &p)| fnet_trading::Kline {
-            timestamp: 1700000000 + i as u64 * 3600,
+            timestamp: 1700000000 + i as i64 * 3600,
             open: p * 0.999,
             high: p * 1.01,
             low: p * 0.99,
@@ -238,12 +240,12 @@ fn generate_synthetic_data(n: usize) -> (fnet_trading::TradingFeatures, Vec<f64>
     )
 }
 
-fn generate_predictions(model: &FNet, dataset: &TradingDataset) -> Vec<f64> {
+fn generate_predictions(model: &mut FNet, dataset: &TradingDataset) -> Vec<f64> {
     let mut predictions = Vec::with_capacity(dataset.len());
 
     for i in 0..dataset.len() {
         let input = dataset.features.slice(ndarray::s![i..i + 1, .., ..]).to_owned();
-        let output = model.forward(&input);
+        let output = model.forward(&input, false);
         predictions.push(output[[0, 0]]);
     }
 
