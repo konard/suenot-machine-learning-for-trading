@@ -349,11 +349,14 @@ mod tests {
 
     #[test]
     fn test_position_sizer() {
-        let sizer = PositionSizer::new(10000.0).with_risk_per_trade(0.02);
+        let sizer = PositionSizer::new(10000.0)
+            .with_risk_per_trade(0.02)
+            .with_max_position(0.5); // Allow larger position to test risk-based sizing
 
         let size = sizer.calculate_size(100.0, 95.0, 1.0);
 
         // Risk = $200, stop distance = $5, size = 40 units
+        // max_notional = 10000 * 0.5 = 5000, max_size = 50, so 40 is within limits
         assert!((size.size - 40.0).abs() < 0.01);
         assert!((size.notional - 4000.0).abs() < 0.01);
     }

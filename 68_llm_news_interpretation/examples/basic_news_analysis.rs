@@ -111,7 +111,7 @@ async fn main() -> anyhow::Result<()> {
         let news = &news_items[0];
         println!("Analyzing: {}", news.title);
 
-        match analyzer.analyze_news(news).await {
+        match analyzer.analyze(news).await {
             Ok(analysis) => {
                 println!("LLM Analysis Result:");
                 println!("  Sentiment: {:.2}", analysis.sentiment.score);

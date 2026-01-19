@@ -11,8 +11,11 @@ mod parser;
 mod prompts;
 
 pub use client::{LlmClient, LlmProvider};
-pub use parser::{LlmResponse, ParsedAnalysis};
-pub use prompts::PromptTemplate;
+pub use parser::{parse_analysis_response, LlmResponse, ParsedAnalysis};
+pub use prompts::PromptBuilder;
+
+/// Type alias for backward compatibility
+pub type PromptTemplate = PromptBuilder;
 
 use crate::news::NewsItem;
 use serde::{Deserialize, Serialize};
@@ -107,9 +110,9 @@ impl NewsAnalyzer {
 
     /// Analyze a single news item
     pub async fn analyze(&self, news: &NewsItem) -> Result<ParsedAnalysis, LlmError> {
-        let prompt = self.prompt_template.build_analysis_prompt(news);
+        let prompt = self.prompt_template.build_single_analysis(news);
         let response = self.client.complete(&prompt).await?;
-        parser::parse_analysis_response(&response.content)
+        parse_analysis_response(&response.content)
     }
 
     /// Analyze multiple news items in batch

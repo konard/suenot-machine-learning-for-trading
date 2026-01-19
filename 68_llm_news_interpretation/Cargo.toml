@@ -97,3 +97,7 @@ codegen-units = 1
 [profile.dev]
 opt-level = 0
 debug = true
+
+[[example]]
+name = "test_sentiment"
+path = "experiments/test_sentiment.rs"

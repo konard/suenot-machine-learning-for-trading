@@ -15,7 +15,6 @@ pub use sources::{NewsSourceConnector, RssSource, TwitterSource};
 pub use types::{NewsItem, NewsSource, RawNews};
 
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 /// News collection manager that aggregates news from multiple sources
@@ -61,7 +60,7 @@ impl NewsCollector {
         let unique_news: Vec<NewsItem> = all_news
             .into_iter()
             .filter(|item| {
-                let hash = self.preprocessor.hash_content(&item.text);
+                let hash = self.preprocessor.hash_content(&item.content);
                 if self.seen_hashes.contains(&hash) {
                     false
                 } else {

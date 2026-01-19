@@ -4,6 +4,25 @@ use super::LlmError;
 use crate::analysis::{EventType, SentimentResult};
 use serde::{Deserialize, Serialize};
 
+/// Response from LLM completion
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LlmResponse {
+    /// The content/text response
+    pub content: String,
+    /// Model used for generation
+    pub model: String,
+    /// Number of tokens used
+    pub tokens_used: usize,
+    /// Latency in milliseconds
+    pub latency_ms: u64,
+}
+
+/// Parse an analysis response from LLM output
+pub fn parse_analysis_response(response: &str) -> Result<ParsedAnalysis, LlmError> {
+    let parser = ResponseParser::new();
+    parser.parse(response)
+}
+
 /// Parsed analysis result from LLM response
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ParsedAnalysis {

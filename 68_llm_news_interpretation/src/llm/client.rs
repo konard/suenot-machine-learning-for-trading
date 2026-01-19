@@ -72,7 +72,10 @@ impl LlmClient {
     }
 
     /// Create a client for local models
-    pub fn new_local(base_url: &str) -> Result<Self, LlmError> {
+    ///
+    /// Note: Currently uses default local endpoint (http://localhost:11434/api/generate).
+    /// The `base_url` parameter is reserved for future use.
+    pub fn new_local(_base_url: &str) -> Result<Self, LlmError> {
         let config = LlmConfig {
             api_key: String::new(),
             provider: LlmProvider::Local,
@@ -119,6 +122,8 @@ impl LlmClient {
         let mut hasher = Sha256::new();
         hasher.update(prompt.as_bytes());
         hasher.update(self.config.model.as_bytes());
+        // Include temperature since different temperatures produce different outputs
+        hasher.update(self.config.temperature.to_be_bytes());
         hex::encode(hasher.finalize())
     }
 

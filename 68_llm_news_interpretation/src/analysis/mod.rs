@@ -6,4 +6,4 @@ pub mod aggregator;
 
 pub use sentiment::{SentimentAnalyzer, SentimentResult};
 pub use events::{EventClassifier, EventType};
-pub use aggregator::{SignalAggregator, AggregatedSignal};
+pub use aggregator::{SignalAggregator, AggregatedSignal, SignalAction};

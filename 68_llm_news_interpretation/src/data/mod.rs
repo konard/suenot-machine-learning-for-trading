@@ -3,5 +3,5 @@
 pub mod market;
 pub mod bybit;
 
-pub use market::{MarketData, OHLCV, Ticker};
+pub use market::{MarketData, MarketDataError, OHLCV, OrderBook, Ticker};
 pub use bybit::{BybitClient, BybitConfig};

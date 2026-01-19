@@ -5,7 +5,7 @@ use chrono::{DateTime, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
 
 /// Bybit API configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct BybitConfig {
     /// API key (for authenticated endpoints)
     pub api_key: Option<String>,
@@ -15,6 +15,17 @@ pub struct BybitConfig {
     pub testnet: bool,
     /// Request timeout in milliseconds
     pub timeout_ms: u64,
+}
+
+impl std::fmt::Debug for BybitConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BybitConfig")
+            .field("api_key", &self.api_key.as_ref().map(|_| "***redacted***"))
+            .field("api_secret", &self.api_secret.as_ref().map(|_| "***redacted***"))
+            .field("testnet", &self.testnet)
+            .field("timeout_ms", &self.timeout_ms)
+            .finish()
+    }
 }
 
 impl Default for BybitConfig {
@@ -90,15 +101,17 @@ impl BybitClient {
     pub async fn get_server_time(&self) -> Result<DateTime<Utc>, MarketDataError> {
         let url = format!("{}/v5/market/time", self.config.base_url());
 
-        let response: BybitResponse<TimeResponse> = self
+        let http_response = self
             .http_client
             .get(&url)
             .send()
             .await
-            .map_err(|e| MarketDataError::ConnectionError(e.to_string()))?
+            .map_err(|e| MarketDataError::ConnectionError(e.to_string()))?;
+
+        let response: BybitResponse<TimeResponse> = http_response
             .json()
             .await
-            .map_err(|e| MarketDataError::ParseError(e.to_string()))?;
+            .map_err(|e: reqwest::Error| MarketDataError::ParseError(e.to_string()))?;
 
         if response.ret_code != 0 {
             return Err(MarketDataError::ApiError(response.ret_msg));
@@ -187,23 +200,23 @@ impl MarketData for BybitClient {
             last_price: ticker_data
                 .last_price
                 .parse()
-                .unwrap_or(0.0),
+                .map_err(|_| MarketDataError::ParseError("Invalid last_price".to_string()))?,
             bid_price: ticker_data
                 .bid1_price
                 .parse()
-                .unwrap_or(0.0),
+                .map_err(|_| MarketDataError::ParseError("Invalid bid1_price".to_string()))?,
             ask_price: ticker_data
                 .ask1_price
                 .parse()
-                .unwrap_or(0.0),
+                .map_err(|_| MarketDataError::ParseError("Invalid ask1_price".to_string()))?,
             volume_24h: ticker_data
                 .volume24h
                 .parse()
-                .unwrap_or(0.0),
+                .map_err(|_| MarketDataError::ParseError("Invalid volume24h".to_string()))?,
             change_24h: ticker_data
                 .price24h_pcnt
                 .parse::<f64>()
-                .unwrap_or(0.0)
+                .map_err(|_| MarketDataError::ParseError("Invalid price24h_pcnt".to_string()))?
                 * 100.0,
             timestamp: Utc::now(),
         })

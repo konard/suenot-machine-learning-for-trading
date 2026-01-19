@@ -1,6 +1,6 @@
 //! News text preprocessing functionality
 
-use super::types::{NewsItem, RawNews};
+use super::types::NewsItem;
 use sha2::{Digest, Sha256};
 use std::collections::HashSet;
 
@@ -44,16 +44,20 @@ impl NewsPreprocessor {
         }
     }
 
-    /// Process a raw news item into a cleaned NewsItem
-    pub fn process(&self, raw: NewsItem) -> NewsItem {
-        let cleaned_text = self.clean_text(&raw.text);
-        let entities = self.extract_entities(&raw.text);
+    /// Process a news item by cleaning its content and extracting symbols
+    pub fn process(&self, mut item: NewsItem) -> NewsItem {
+        let cleaned_content = self.clean_text(&item.content);
+        let extracted_symbols = self.extract_entities(&item.content);
 
-        NewsItem {
-            text: cleaned_text,
-            entities,
-            ..raw
+        item.content = cleaned_content;
+        // Merge extracted symbols with existing ones
+        for symbol in extracted_symbols {
+            if !item.symbols.contains(&symbol) {
+                item.symbols.push(symbol);
+            }
         }
+
+        item
     }
 
     /// Clean and normalize text

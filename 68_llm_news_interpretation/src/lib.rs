@@ -14,7 +14,8 @@
 //! ## Example
 //!
 //! ```rust,no_run
-//! use llm_news_interpretation::{NewsAnalyzer, LlmClient, TradingSignalGenerator};
+//! use llm_news_interpretation::{NewsAnalyzer, LlmClient, NewsItem, NewsSource};
+//! use chrono::Utc;
 //!
 //! #[tokio::main]
 //! async fn main() -> anyhow::Result<()> {
@@ -24,11 +25,22 @@
 //!     // Create the news analyzer
 //!     let analyzer = NewsAnalyzer::new(llm_client);
 //!
-//!     // Analyze a news item
-//!     let news = "Bitcoin ETF approved by SEC";
-//!     let analysis = analyzer.analyze(news).await?;
+//!     // Create a news item to analyze
+//!     let news = NewsItem {
+//!         id: "1".to_string(),
+//!         title: "Bitcoin ETF approved by SEC".to_string(),
+//!         content: "The SEC has approved the first Bitcoin ETF.".to_string(),
+//!         source: NewsSource::Bloomberg,
+//!         url: None,
+//!         published_at: Utc::now(),
+//!         symbols: vec!["BTC".to_string()],
+//!         relevance_score: 0.9,
+//!     };
 //!
-//!     println!("Sentiment: {}", analysis.sentiment);
+//!     // Analyze the news item
+//!     let analysis = analyzer.analyze(&news).await?;
+//!
+//!     println!("Sentiment: {:?}", analysis.sentiment);
 //!     println!("Event type: {:?}", analysis.event_type);
 //!
 //!     Ok(())

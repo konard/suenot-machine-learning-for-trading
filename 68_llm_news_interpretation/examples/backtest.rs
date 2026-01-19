@@ -113,7 +113,9 @@ fn main() {
                         position_size.abs() * (position_entry_price - current_price)
                     };
 
-                    capital += position_size.abs() * current_price + pnl;
+                    // For long: return position value (entry cost + pnl)
+                    // For short: return collateral + pnl
+                    capital += position_size.abs() * position_entry_price + pnl;
 
                     trades.push(Trade {
                         entry_price: position_entry_price,
@@ -146,7 +148,9 @@ fn main() {
             position_size.abs() * (position_entry_price - final_price)
         };
 
-        capital += position_size.abs() * final_price + pnl;
+        // For long: return position value (entry cost + pnl)
+        // For short: return collateral + pnl
+        capital += position_size.abs() * position_entry_price + pnl;
         metrics_recorder.record_trade(pnl);
 
         trades.push(Trade {
