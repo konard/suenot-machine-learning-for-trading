@@ -1,6 +1,6 @@
 //! Backtesting engine for LLM-generated signals.
 
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
