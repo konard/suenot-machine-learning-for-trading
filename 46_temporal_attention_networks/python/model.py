@@ -71,6 +71,11 @@ class TABLConfig:
             "hidden_T must be positive and <= seq_len"
         assert self.hidden_D > 0, "hidden_D must be positive"
         assert 0 <= self.dropout < 1, "dropout must be in [0, 1)"
+        if self.use_multihead:
+            assert self.n_heads > 0, "n_heads must be > 0 when use_multihead=True"
+        if self.output_type in (OutputType.BINARY, OutputType.REGRESSION):
+            assert self.n_classes == 1, \
+                f"n_classes must be 1 for {self.output_type.value} outputs, got {self.n_classes}"
 
     @property
     def bilinear_output_dim(self) -> int:
@@ -516,9 +521,12 @@ class TABLModel(nn.Module):
         # Classification
         logits = self.classifier(features)
 
-        # Compute probabilities
+        # Compute probabilities based on output type
         if self.config.output_type == OutputType.BINARY:
             probs = torch.sigmoid(logits)
+        elif self.config.output_type == OutputType.REGRESSION:
+            # For regression, probabilities don't apply - use logits directly
+            probs = logits
         else:
             probs = F.softmax(logits, dim=-1)
 
@@ -540,13 +548,16 @@ class TABLModel(nn.Module):
             x: Input tensor (batch, seq_len, input_dim)
 
         Returns:
-            Predicted class labels (batch,)
+            For classification: Predicted class labels (batch,)
+            For regression: Continuous predictions (batch,)
         """
         self.eval()
         with torch.no_grad():
             output = self.forward(x)
             if self.config.output_type == OutputType.BINARY:
                 return (output['probs'] > 0.5).long().squeeze(-1)
+            if self.config.output_type == OutputType.REGRESSION:
+                return output['logits'].squeeze(-1)
             return output['logits'].argmax(dim=-1)
 
 

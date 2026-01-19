@@ -176,21 +176,29 @@ impl BacktestEngine {
         // Calculate metrics
         let total_return = (equity.last().unwrap() / self.initial_capital) - 1.0;
         let n_periods = returns.len() as f64;
-        let annualized_return = (1.0 + total_return).powf(self.periods_per_year / n_periods) - 1.0;
 
-        // Sharpe ratio
-        let mean_return = returns.iter().sum::<f64>() / n_periods;
-        let variance = returns
-            .iter()
-            .map(|r| (r - mean_return).powi(2))
-            .sum::<f64>()
-            / n_periods;
-        let std = variance.sqrt();
-        let risk_free_per_period = self.risk_free_rate / self.periods_per_year;
-        let sharpe_ratio = if std > 0.0 {
-            (mean_return - risk_free_per_period) / std * self.periods_per_year.sqrt()
+        // Guard against empty returns to avoid division-by-zero
+        let (annualized_return, sharpe_ratio) = if n_periods > 0.0 {
+            let annualized_return =
+                (1.0 + total_return).powf(self.periods_per_year / n_periods) - 1.0;
+
+            // Sharpe ratio
+            let mean_return = returns.iter().sum::<f64>() / n_periods;
+            let variance = returns
+                .iter()
+                .map(|r| (r - mean_return).powi(2))
+                .sum::<f64>()
+                / n_periods;
+            let std = variance.sqrt();
+            let risk_free_per_period = self.risk_free_rate / self.periods_per_year;
+            let sharpe_ratio = if std > 0.0 {
+                (mean_return - risk_free_per_period) / std * self.periods_per_year.sqrt()
+            } else {
+                0.0
+            };
+            (annualized_return, sharpe_ratio)
         } else {
-            0.0
+            (0.0, 0.0)
         };
 
         // Maximum drawdown

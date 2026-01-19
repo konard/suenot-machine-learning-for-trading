@@ -43,8 +43,11 @@ impl BilinearLayer {
     /// * `t_out` - Output temporal dimension
     /// * `d_in` - Input feature dimension
     /// * `d_out` - Output feature dimension
-    /// * `dropout` - Dropout rate (0.0 - 1.0)
+    /// * `dropout` - Dropout rate (0.0 - 1.0, exclusive of 1.0)
     /// * `use_batch_norm` - Whether to use batch normalization
+    ///
+    /// # Panics
+    /// Panics if dropout is not in the range [0.0, 1.0)
     pub fn new(
         t_in: usize,
         t_out: usize,
@@ -53,6 +56,11 @@ impl BilinearLayer {
         dropout: f64,
         use_batch_norm: bool,
     ) -> Self {
+        assert!(
+            (0.0..1.0).contains(&dropout),
+            "dropout must be in [0, 1), got {}",
+            dropout
+        );
         let mut rng = rand::thread_rng();
 
         // Xavier/Glorot initialization

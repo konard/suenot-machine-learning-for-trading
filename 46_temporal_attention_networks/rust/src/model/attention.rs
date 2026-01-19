@@ -116,10 +116,16 @@ impl TemporalAttention {
     }
 
     /// Compute softmax over a vector
+    ///
+    /// Handles edge cases where sum is zero or non-finite (e.g., when all inputs
+    /// are masked or contain NaN/Inf) by returning zeros.
     fn softmax(x: &Array1<f64>) -> Array1<f64> {
         let max_val = x.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
         let exp_x = x.mapv(|v| (v - max_val).exp());
         let sum: f64 = exp_x.sum();
+        if sum == 0.0 || !sum.is_finite() {
+            return Array1::zeros(x.len());
+        }
         exp_x / sum
     }
 

@@ -197,10 +197,17 @@ impl TABLModel {
     }
 
     /// Compute softmax probabilities from logits
+    ///
+    /// Handles edge cases where sum is zero or non-finite (NaN/Inf) by
+    /// returning a uniform distribution.
     pub fn softmax(logits: &Array1<f64>) -> Array1<f64> {
         let max_val = logits.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
         let exp_logits = logits.mapv(|v| (v - max_val).exp());
         let sum: f64 = exp_logits.sum();
+        if !sum.is_finite() || sum == 0.0 {
+            let n = logits.len().max(1) as f64;
+            return Array1::from_elem(logits.len(), 1.0 / n);
+        }
         exp_logits / sum
     }
 
