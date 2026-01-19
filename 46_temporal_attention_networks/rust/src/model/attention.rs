@@ -77,6 +77,9 @@ impl TemporalAttention {
         let w = Array1::from_shape_fn(hidden_dim, |_| rng.sample(dist));
 
         let (wq, wk, wv, wo, head_dim) = if attention_type == AttentionType::MultiHead && n_heads > 1 {
+            // Note: For best results, input_dim should be divisible by n_heads.
+            // If not divisible, the last head_dim * n_heads < input_dim, which may
+            // result in some information loss in the output projection.
             let head_dim = input_dim / n_heads;
             let head_std = (2.0 / (input_dim + head_dim) as f64).sqrt();
             let head_dist = Normal::new(0.0, head_std).unwrap();

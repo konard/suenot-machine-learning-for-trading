@@ -17,6 +17,11 @@ async fn main() -> anyhow::Result<()> {
     let klines = client.get_klines("BTCUSDT", "60", 100).await?;
     println!("Fetched {} candles\n", klines.len());
 
+    if klines.is_empty() {
+        println!("No candles returned from Bybit.");
+        return Ok(());
+    }
+
     // Display first few candles
     println!("First 5 candles:");
     println!("{:<20} {:>12} {:>12} {:>12} {:>12} {:>15}",
@@ -58,12 +63,14 @@ async fn main() -> anyhow::Result<()> {
             orderbook.asks[i].price, orderbook.asks[i].quantity);
     }
 
-    if let Some(mid) = orderbook.mid_price() {
-        println!("\nMid Price: {:.2}", mid);
+    let mid = orderbook.mid_price();
+    if let Some(mid_val) = mid {
+        println!("\nMid Price: {:.2}", mid_val);
     }
-    if let Some(spread) = orderbook.spread() {
-        println!("Spread: {:.2} ({:.4}%)", spread,
-            spread / orderbook.mid_price().unwrap_or(1.0) * 100.0);
+    if let (Some(spread), Some(mid_val)) = (orderbook.spread(), mid) {
+        println!("Spread: {:.2} ({:.4}%)", spread, spread / mid_val * 100.0);
+    } else if let Some(spread) = orderbook.spread() {
+        println!("Spread: {:.2}", spread);
     }
     println!("Imbalance (5 levels): {:.4}", orderbook.imbalance(5));
 

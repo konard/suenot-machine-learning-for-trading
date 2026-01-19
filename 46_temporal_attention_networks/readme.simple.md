@@ -15,7 +15,7 @@ Imagine you're watching a soccer game and trying to predict who will score next.
 
 ### Without Attention (Old Way):
 
-```
+```text
 Watching a mystery movie:
 
 Minute 1:  🎬 Opening credits      → Remember equally
@@ -29,7 +29,7 @@ At the end: "Wait, what was important again?"
 
 ### With Temporal Attention (Smart Way):
 
-```
+```text
 Watching a mystery movie:
 
 Minute 1:  🎬 Opening credits      → Low attention (0.02)
@@ -51,7 +51,7 @@ At the end: "The clue at minute 30 explained the reveal!"
 
 Think of stock prices like a heartbeat monitor:
 
-```
+```text
 Price over time:
 
      ^
@@ -79,7 +79,7 @@ But a few moments are CRITICAL (peaks and valleys)
 
 ### Step 1: Look at All the Data
 
-```
+```text
 TABL receives data about the last 100 time steps:
 
 Time:  1   2   3   4   5   6   7   8   9  10  ...  100
@@ -90,7 +90,7 @@ Data: [price, volume, spread, imbalance, etc.]
 
 The attention mechanism gives each moment a score:
 
-```
+```text
 ATTENTION SCORING:
 
 Time:   1    2    3    4    5    6    7    8    9   10
@@ -102,7 +102,7 @@ Score: 0.01 0.02 0.01 0.05 0.30 0.25 0.10 0.08 0.10 0.08
 
 ### Step 3: Focus on What Matters
 
-```
+```text
 Creating the Summary:
 
 Instead of:
@@ -117,7 +117,7 @@ while time 1-3 combined only get 4%!
 
 ### Step 4: Make the Prediction
 
-```
+```text
 Based on the attention-weighted summary:
 
 "Price will likely go UP because:

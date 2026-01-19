@@ -12,7 +12,7 @@ Rust implementation of the Temporal Attention-Augmented Bilinear Network (TABL) 
 
 ## Project Structure
 
-```
+```text
 rust/
 ├── Cargo.toml
 ├── README.md

@@ -91,11 +91,12 @@ impl SignalGenerator for TABLStrategy {
         let proba = self.model.predict_proba(x);
 
         // Find max probability and corresponding class
+        // Handle NaN values by treating them as smaller than any valid value
         let (max_class, max_prob) = proba
             .iter()
             .enumerate()
-            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
-            .unwrap();
+            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+            .unwrap_or((1, &0.0)); // Default to Hold class if all values are NaN
 
         // Only generate signal if confidence is high enough
         if *max_prob < self.min_confidence {

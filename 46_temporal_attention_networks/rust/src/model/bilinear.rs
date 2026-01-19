@@ -107,7 +107,11 @@ impl BilinearLayer {
         let mut h = h1.dot(&self.w2);     // [T_out, D_out]
         h = &h + &self.bias;
 
-        // Batch normalization (simplified - per-sample)
+        // Batch normalization (simplified - inference-only)
+        // Note: This implementation uses pre-computed running statistics and does not
+        // update them during training. For proper training, batch statistics should be
+        // computed and running statistics updated with exponential moving average.
+        // This simplified version is suitable for inference with pre-trained models.
         if self.use_batch_norm {
             if let (Some(running_mean), Some(running_var)) = (&self.running_mean, &self.running_var) {
                 h = (&h - running_mean) / (running_var.mapv(|v| (v + 1e-5).sqrt()));

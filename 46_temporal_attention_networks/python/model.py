@@ -80,8 +80,7 @@ class TABLConfig:
     @property
     def total_output_dim(self) -> int:
         """Total output dimension before classification head"""
-        if self.use_multihead:
-            return self.bilinear_output_dim + self.input_dim
+        # Both single-head and multi-head variants produce same output dimension
         return self.bilinear_output_dim + self.input_dim
 
 

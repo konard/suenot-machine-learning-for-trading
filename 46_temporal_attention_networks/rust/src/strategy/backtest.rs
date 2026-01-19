@@ -153,13 +153,13 @@ impl BacktestEngine {
             equity.push(new_equity);
 
             // Track trades
-            if position_change > 0.0 && position != 0.0 {
-                // Closing a position
+            if position != 0.0 && new_position != position {
+                // Closing a position (including position flips from long to short or vice versa)
                 let trade_return = (prices[i] - current_trade_entry) / current_trade_entry * position;
                 trades.push(trade_return);
             }
-            if new_position != 0.0 && position == 0.0 {
-                // Opening a position
+            if new_position != 0.0 && (position == 0.0 || new_position != position) {
+                // Opening a position (from flat or after a flip)
                 current_trade_entry = prices[i];
             }
 
