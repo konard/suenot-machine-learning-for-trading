@@ -52,43 +52,46 @@ def main():
 
     print(f"Trainable parameters: {sum(p.numel() for p in learned.parameters())}")
     print(f"Output shape: {encoded.shape}")
-    print(f"Embedding norm at pos 0: {torch.norm(learned.position_embeddings.weight[0]).item():.4f}")
+    print(f"Embedding norm at pos 0: {torch.norm(learned.embedding.weight[0]).item():.4f}")
     print("Note: These would be trained during model training")
 
     # 3. Relative Encoding
     print("\n3. Relative Positional Encoding")
     print("-" * 40)
 
-    relative = RelativePositionalEncoding(d_model, max_distance=50)
+    n_heads = 4
+    head_dim = d_model // n_heads
+    relative = RelativePositionalEncoding(d_model, n_heads, max_relative_position=50)
 
-    # Compute relative position matrix
-    pos = torch.arange(seq_len)
-    rel_pos = pos.unsqueeze(0) - pos.unsqueeze(1)  # (seq_len, seq_len)
+    # Create Q, K, V tensors [batch, n_heads, seq_len, head_dim]
+    q = torch.randn(batch_size, n_heads, seq_len, head_dim)
+    k = torch.randn(batch_size, n_heads, seq_len, head_dim)
+    v = torch.randn(batch_size, n_heads, seq_len, head_dim)
 
-    # Get embeddings
-    rel_emb = relative.get_embedding(rel_pos)
+    # Apply relative attention
+    output = relative(q, k, v)
 
-    print(f"Relative position range: [{rel_pos.min().item()}, {rel_pos.max().item()}]")
-    print(f"Embedding shape: {rel_emb.shape}")
-    print(f"Same distance embeddings have similar norms:")
-    print(f"  Distance +3: norm = {torch.norm(relative.get_embedding(torch.tensor([[3]]))).item():.4f}")
-    print(f"  Distance -3: norm = {torch.norm(relative.get_embedding(torch.tensor([[-3]]))).item():.4f}")
+    print(f"Q/K/V shape: [batch={batch_size}, heads={n_heads}, seq={seq_len}, head_dim={head_dim}]")
+    print(f"Output shape: {output.shape}")
+    print(f"Max relative position: 50")
+    print("Note: Modifies attention scores based on relative positions")
 
     # 4. Rotary Encoding (RoPE)
     print("\n4. Rotary Positional Encoding (RoPE)")
     print("-" * 40)
 
-    rope = RotaryPositionalEncoding(d_model, max_len)
-    q = torch.randn(batch_size, seq_len, d_model)
-    k = torch.randn(batch_size, seq_len, d_model)
+    # RoPE expects [batch, n_heads, seq_len, head_dim]
+    rope = RotaryPositionalEncoding(d_model, n_heads, max_len=max_len)
+    q_rope = torch.randn(batch_size, n_heads, seq_len, head_dim)
+    k_rope = torch.randn(batch_size, n_heads, seq_len, head_dim)
 
-    q_rot, k_rot = rope(q, k)
+    q_rot, k_rot = rope(q_rope, k_rope)
 
-    print(f"Query/Key shape: {q.shape}")
+    print(f"Query/Key shape: [batch={batch_size}, heads={n_heads}, seq={seq_len}, head_dim={head_dim}]")
     print(f"Rotated Q/K shape: {q_rot.shape}")
 
     # Verify norm preservation
-    q_norm_before = torch.norm(q, dim=-1).mean()
+    q_norm_before = torch.norm(q_rope, dim=-1).mean()
     q_norm_after = torch.norm(q_rot, dim=-1).mean()
     print(f"Query norm before rotation: {q_norm_before:.4f}")
     print(f"Query norm after rotation: {q_norm_after:.4f}")

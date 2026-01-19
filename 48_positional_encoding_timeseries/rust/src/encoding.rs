@@ -473,11 +473,22 @@ impl PositionalEncoding for RotaryEncoding {
         // For RoPE, we return the interleaved sin/cos values
         let half_d = self.d_model / 2;
         let mut result = Array2::zeros((positions.len(), self.d_model));
+        let max_cached = self.sin_cache.nrows();
 
         for (i, &pos) in positions.iter().enumerate() {
-            for j in 0..half_d {
-                result[[i, 2 * j]] = self.sin_cache[[pos, j]];
-                result[[i, 2 * j + 1]] = self.cos_cache[[pos, j]];
+            if pos < max_cached {
+                // Use cached values
+                for j in 0..half_d {
+                    result[[i, 2 * j]] = self.sin_cache[[pos, j]];
+                    result[[i, 2 * j + 1]] = self.cos_cache[[pos, j]];
+                }
+            } else {
+                // Compute on-the-fly for out-of-range positions
+                for j in 0..half_d {
+                    let theta = (pos as f64) / self.base.powf((2.0 * j as f64) / self.d_model as f64);
+                    result[[i, 2 * j]] = theta.sin();
+                    result[[i, 2 * j + 1]] = theta.cos();
+                }
             }
         }
 
