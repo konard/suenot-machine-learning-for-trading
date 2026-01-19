@@ -1,0 +1,68 @@
+[package]
+name = "earnings_call_analyzer"
+version = "0.1.0"
+edition = "2021"
+authors = ["ML Trading Team"]
+description = "LLM-powered earnings call analysis for trading signals"
+license = "MIT"
+keywords = ["trading", "machine-learning", "nlp", "earnings", "llm"]
+categories = ["science", "finance"]
+
+[lib]
+name = "earnings_call_analyzer"
+path = "src/lib.rs"
+
+[[example]]
+name = "basic_analysis"
+path = "examples/basic_analysis.rs"
+
+[[example]]
+name = "bybit_client"
+path = "examples/bybit_client.rs"
+
+[[example]]
+name = "backtest_example"
+path = "examples/backtest_example.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# HTTP client for APIs
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Math and linear algebra
+ndarray = { version = "0.15", features = ["serde"] }
+rand = "0.8"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Async utilities
+futures = "0.3"
+
+# Text processing
+regex = "1.10"
+
+# Statistics
+statrs = "0.16"
+
+[dev-dependencies]
+tokio-test = "0.4"
+approx = "0.5"
+
+[features]
+default = []
+openai = [] # Feature flag for OpenAI integration
