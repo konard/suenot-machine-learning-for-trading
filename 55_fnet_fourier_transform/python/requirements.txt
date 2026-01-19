@@ -1,0 +1,20 @@
+# FNet for Trading - Python Dependencies
+
+# Core ML libraries
+torch>=2.0.0
+numpy>=1.21.0
+pandas>=1.3.0
+
+# HTTP requests for API calls
+requests>=2.25.0
+
+# Visualization (optional)
+matplotlib>=3.4.0
+seaborn>=0.11.0
+
+# Progress bars (optional)
+tqdm>=4.60.0
+
+# For Jupyter notebooks (optional)
+jupyter>=1.0.0
+ipywidgets>=7.6.0
