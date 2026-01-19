@@ -1,0 +1,64 @@
+[package]
+name = "llm_finance"
+version = "0.1.0"
+edition = "2021"
+authors = ["Machine Learning for Trading"]
+description = "Fine-tuning LLM for Finance - Rust implementation"
+license = "MIT"
+readme = "README.md"
+
+[dependencies]
+# Neural network and tensor operations
+ndarray = { version = "0.15", features = ["rayon"] }
+ndarray-rand = "0.14"
+rand = "0.8"
+rand_distr = "0.4"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# HTTP client for API calls
+reqwest = { version = "0.11", features = ["json", "blocking"] }
+tokio = { version = "1.0", features = ["full"] }
+
+# Date/time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging
+log = "0.4"
+env_logger = "0.10"
+
+# CLI (for examples)
+clap = { version = "4.0", features = ["derive"] }
+
+# Progress bars
+indicatif = "0.17"
+
+[dev-dependencies]
+criterion = "0.5"
+approx = "0.5"
+
+[[bin]]
+name = "sentiment_example"
+path = "src/bin/sentiment_example.rs"
+
+[[bin]]
+name = "crypto_example"
+path = "src/bin/crypto_example.rs"
+
+[[bin]]
+name = "backtest_example"
+path = "src/bin/backtest_example.rs"
+
+[lib]
+name = "llm_finance"
+path = "src/lib.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
