@@ -1,0 +1,19 @@
+# Core dependencies
+torch>=2.0.0
+numpy>=1.21.0
+pandas>=1.3.0
+
+# Data sources
+ccxt>=4.0.0           # Bybit and other crypto exchanges
+yfinance>=0.2.0       # Yahoo Finance for stocks
+
+# Visualization (optional)
+matplotlib>=3.5.0
+seaborn>=0.12.0
+
+# Technical analysis (optional)
+ta>=0.10.0
+
+# Development
+pytest>=7.0.0
+pytest-cov>=4.0.0
