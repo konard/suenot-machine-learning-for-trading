@@ -84,8 +84,12 @@ fn main() -> Result<(), Box<dyn Error>> {
             // 2. Update weights with optimizer
         }
 
-        let avg_loss = epoch_loss / n_batches as f64;
-        println!("Epoch {}/{}: avg_loss = {:.6}", epoch, epochs, avg_loss);
+        if n_batches > 0 {
+            let avg_loss = epoch_loss / n_batches as f64;
+            println!("Epoch {}/{}: avg_loss = {:.6}", epoch, epochs, avg_loss);
+        } else {
+            println!("Epoch {}/{}: no batches processed", epoch, epochs);
+        }
     }
 
     // Validation
@@ -100,7 +104,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         n_val_batches += 1;
     }
 
-    println!("Validation loss: {:.6}", val_loss / n_val_batches as f64);
+    if n_val_batches > 0 {
+        println!("Validation loss: {:.6}", val_loss / n_val_batches as f64);
+    } else {
+        println!("Validation: no batches to evaluate");
+    }
 
     // Test prediction
     println!("\n--- Sample Predictions ---\n");

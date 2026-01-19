@@ -33,7 +33,7 @@ impl Features {
     pub fn compute(klines: &[Kline], lookback: usize) -> Self {
         let n = klines.len();
 
-        if n < lookback + 1 {
+        if lookback == 0 || n < lookback + 1 {
             return Self::default();
         }
 
@@ -66,8 +66,9 @@ impl Features {
             .map(|k| (k.close - k.open) / k.open)
             .collect();
 
-        // MA ratio
-        let ma_fast = rolling_mean(&closes, lookback / 2);
+        // MA ratio - ensure fast window is at least 1
+        let fast_window = (lookback / 2).max(1);
+        let ma_fast = rolling_mean(&closes, fast_window);
         let ma_slow = rolling_mean(&closes, lookback);
         let ma_ratio: Vec<f64> = ma_fast.iter()
             .zip(ma_slow.iter())
@@ -128,11 +129,14 @@ impl Features {
 
 /// Скользящее среднее
 fn rolling_mean(data: &[f64], window: usize) -> Vec<f64> {
+    if window == 0 {
+        return vec![0.0; data.len()];
+    }
     let n = data.len();
     let mut result = Vec::with_capacity(n);
 
     for i in 0..n {
-        if i < window - 1 {
+        if i + 1 < window {
             // Используем доступные данные
             let sum: f64 = data[..=i].iter().sum();
             result.push(sum / (i + 1) as f64);
@@ -147,11 +151,14 @@ fn rolling_mean(data: &[f64], window: usize) -> Vec<f64> {
 
 /// Скользящее стандартное отклонение
 fn rolling_std(data: &[f64], window: usize) -> Vec<f64> {
+    if window == 0 {
+        return vec![0.0; data.len()];
+    }
     let n = data.len();
     let mut result = Vec::with_capacity(n);
 
     for i in 0..n {
-        if i < window - 1 {
+        if i + 1 < window {
             let slice = &data[..=i];
             let mean = slice.iter().sum::<f64>() / slice.len() as f64;
             let var = slice.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / slice.len() as f64;

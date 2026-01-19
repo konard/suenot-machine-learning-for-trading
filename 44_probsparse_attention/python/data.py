@@ -294,7 +294,7 @@ def compute_features(df: pd.DataFrame, lookback: int = 20) -> pd.DataFrame:
     delta = df['close'].diff()
     gain = (delta.where(delta > 0, 0)).rolling(lookback).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(lookback).mean()
-    rs = gain / loss
+    rs = gain / (loss + 1e-10)  # Add epsilon to prevent division by zero
     df['rsi'] = 100 - (100 / (1 + rs))
 
     # Bollinger Bands position

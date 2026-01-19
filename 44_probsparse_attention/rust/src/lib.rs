@@ -44,7 +44,7 @@
 //!     let model = InformerModel::new(config);
 //!
 //!     // Делаем прогноз
-//!     let predictions = model.predict(&dataset);
+//!     let predictions = model.predict(&dataset.x);
 //! }
 //! ```
 

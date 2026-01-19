@@ -60,9 +60,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let multi_data = client.get_multi_klines(symbols, "60", 100).await?;
 
     for (symbol, klines) in &multi_data {
-        let latest = klines.last().unwrap();
-        println!("{}: {} klines, latest close: ${:.2}",
-            symbol, klines.len(), latest.close);
+        if let Some(latest) = klines.last() {
+            println!("{}: {} klines, latest close: ${:.2}",
+                symbol, klines.len(), latest.close);
+        } else {
+            println!("{}: No data available", symbol);
+        }
     }
 
     println!("\n=== Done ===");

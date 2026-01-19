@@ -67,7 +67,7 @@ impl DataLoader {
         // Пропускаем начальные точки с неполными признаками
         let skip = self.lookback.max(self.norm_window);
 
-        if feature_matrix.len() <= skip + seq_len + pred_len {
+        if feature_matrix.len() < skip + seq_len + pred_len {
             return Err("Not enough data after preprocessing".to_string());
         }
 

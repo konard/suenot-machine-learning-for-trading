@@ -219,7 +219,7 @@ class InformerStrategy:
         self,
         X: torch.Tensor,
         current_price: float
-    ) -> Tuple[SignalType, float]:
+    ) -> Tuple[SignalType, float, float]:
         """
         Get trading signal and position size
 
@@ -230,6 +230,7 @@ class InformerStrategy:
         Returns:
             signal: Trading signal
             position_size: Recommended position size (0 to max_position)
+            predicted_return: First step prediction value
         """
         self.model.eval()
         with torch.no_grad():
@@ -240,6 +241,9 @@ class InformerStrategy:
         signals = self.signal_generator.generate(predictions, confidence)
         signal = signals[0]
 
+        # Extract predicted return from first step
+        pred_return = predictions[0, 0].item() if predictions.dim() > 1 else predictions[0].item()
+
         # Position sizing
         if signal == SignalType.FLAT:
             position_size = 0.0
@@ -249,7 +253,7 @@ class InformerStrategy:
         else:
             position_size = self.max_position
 
-        return signal, position_size
+        return signal, position_size, pred_return
 
 
 class BacktestEngine:
@@ -323,8 +327,8 @@ class BacktestEngine:
             actual_return = np.log(next_price / current_price)
             timestamp = test_data.iloc[current_idx]['timestamp']
 
-            # Get new signal
-            new_signal, new_size = strategy.get_signal(X, current_price)
+            # Get new signal (includes prediction to avoid redundant inference)
+            new_signal, new_size, pred_return = strategy.get_signal(X, current_price)
 
             # Check stop-loss / take-profit
             if position != SignalType.FLAT and entry_price > 0:
@@ -371,12 +375,7 @@ class BacktestEngine:
                     )
                     pnl = unrealized_pnl
 
-            # Get predicted return
-            with torch.no_grad():
-                output = strategy.model(X)
-                pred_return = output['predictions'][0, 0].item()
-
-            # Record trade
+            # Record trade (pred_return already obtained from get_signal)
             trades.append(TradeRecord(
                 timestamp=timestamp,
                 signal=position,
@@ -564,8 +563,8 @@ if __name__ == "__main__":
     print("\n2. Testing InformerStrategy:")
     strategy = InformerStrategy(model, sg)
     X = torch.randn(1, 96, 6)
-    signal, size = strategy.get_signal(X, 100.0)
-    print(f"   Signal: {signal.name}, Size: {size:.2f}")
+    signal, size, pred_return = strategy.get_signal(X, 100.0)
+    print(f"   Signal: {signal.name}, Size: {size:.2f}, Pred return: {pred_return:.6f}")
 
     # Test backtest engine
     print("\n3. Testing BacktestEngine:")

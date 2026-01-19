@@ -139,15 +139,18 @@ impl PositionalEncoding {
     pub fn forward(&self, x: &Array3<f64>) -> Array3<f64> {
         let (batch_size, seq_len, d_model) = x.dim();
         let mut output = x.clone();
+        let scale = 1.0 / (1.0 - self.dropout);
 
         for b in 0..batch_size {
             for t in 0..seq_len {
                 for d in 0..d_model {
                     output[[b, t, d]] += self.pe[[t, d]];
 
-                    // Dropout (для training)
+                    // Dropout (для training) with proper scaling
                     if self.dropout > 0.0 && rand::random::<f64>() < self.dropout {
                         output[[b, t, d]] = 0.0;
+                    } else if self.dropout > 0.0 {
+                        output[[b, t, d]] *= scale;
                     }
                 }
             }

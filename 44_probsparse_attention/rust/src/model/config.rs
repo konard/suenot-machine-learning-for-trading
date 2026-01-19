@@ -119,6 +119,15 @@ impl InformerConfig {
 
     /// Валидирует конфигурацию
     pub fn validate(&self) -> Result<(), String> {
+        if self.n_heads == 0 {
+            return Err("n_heads must be > 0".to_string());
+        }
+        if self.n_encoder_layers == 0 {
+            return Err("n_encoder_layers must be > 0".to_string());
+        }
+        if self.d_model == 0 {
+            return Err("d_model must be > 0".to_string());
+        }
         if self.d_model % self.n_heads != 0 {
             return Err(format!(
                 "d_model ({}) must be divisible by n_heads ({})",

@@ -50,10 +50,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let signal_generator = SignalGenerator::with_thresholds(0.0005, -0.0005);
 
-    // Generate predictions and signals
-    let skip_start = loader.prepare_inference(&klines[..150], seq_len)
-        .map(|_| 150 + seq_len)
-        .unwrap_or(200);
+    // Align first signal with the first valid target index
+    // The dataset starts after lookback + norm_window preprocessing
+    let skip_start = klines.len().saturating_sub(dataset.n_samples + pred_len - 1);
 
     let mut signals: Vec<TradingSignal> = vec![TradingSignal::Neutral; skip_start];
 
@@ -69,7 +68,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         signals.extend(batch_signals);
     }
 
-    // Pad signals to match klines length
+    // Ensure signals match klines length exactly
+    signals.truncate(klines.len());
     while signals.len() < klines.len() {
         signals.push(TradingSignal::Neutral);
     }

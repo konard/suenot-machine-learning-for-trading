@@ -224,6 +224,29 @@ impl TradingStrategy {
             daily_returns.push(position_return);
         }
 
+        // Force-close any open position at the end so trade stats are accurate
+        if position != 0.0 {
+            let last_idx = n - 1;
+            let last_close = klines[last_idx].close;
+
+            let trade_cost = capital * self.commission + capital * self.slippage;
+            capital -= trade_cost;
+
+            if let Some(builder) = current_trade.take() {
+                trades.push(builder.close(last_idx, last_close));
+            }
+
+            if let Some(last_equity) = equity_curve.last_mut() {
+                *last_equity = capital;
+            }
+            if equity_curve.len() >= 2 {
+                let prev_equity = equity_curve[equity_curve.len() - 2];
+                if let Some(last_ret) = daily_returns.last_mut() {
+                    *last_ret = capital / prev_equity - 1.0;
+                }
+            }
+        }
+
         // Рассчитываем метрики
         self.calculate_metrics(
             &equity_curve,

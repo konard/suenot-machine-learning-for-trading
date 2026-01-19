@@ -53,6 +53,9 @@ impl TimeSeriesDataset {
         }
 
         let n_features = features.first().map(|f| f.len()).unwrap_or(0);
+        if n_features == 0 || features.iter().any(|row| row.len() != n_features) {
+            return Err("All feature rows must have the same non-zero length".to_string());
+        }
         let n_samples = n_points - seq_len - pred_len + 1;
 
         // Создаём массивы
@@ -91,6 +94,9 @@ impl TimeSeriesDataset {
         train_ratio: f64,
         val_ratio: f64,
     ) -> (TimeSeriesDataset, TimeSeriesDataset, TimeSeriesDataset) {
+        assert!(train_ratio >= 0.0 && train_ratio <= 1.0, "train_ratio must be in [0,1]");
+        assert!(val_ratio >= 0.0 && val_ratio <= 1.0, "val_ratio must be in [0,1]");
+        assert!(train_ratio + val_ratio <= 1.0, "train_ratio + val_ratio must be <= 1.0");
         let n_train = (self.n_samples as f64 * train_ratio) as usize;
         let n_val = (self.n_samples as f64 * val_ratio) as usize;
 
@@ -155,6 +161,7 @@ pub struct BatchIterator<'a> {
 
 impl<'a> BatchIterator<'a> {
     fn new(dataset: &'a TimeSeriesDataset, batch_size: usize, shuffle: bool) -> Self {
+        assert!(batch_size > 0, "batch_size must be > 0");
         let mut indices: Vec<usize> = (0..dataset.n_samples).collect();
 
         if shuffle {
