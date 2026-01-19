@@ -386,14 +386,14 @@ impl DataLoader for MockLoader {
             .max(Duration::minutes(1));
 
         for _ in 0..num_bars {
-            let ret = rng.gen_range(-volatility..volatility) + drift;
-            let open = price;
+            let ret: f64 = rng.gen_range(-volatility..volatility) + drift;
+            let open: f64 = price;
             price *= 1.0 + ret;
-            let close = price;
+            let close: f64 = price;
 
-            let high = open.max(close) * (1.0 + rng.gen_range(0.0..volatility * 0.5));
-            let low = open.min(close) * (1.0 - rng.gen_range(0.0..volatility * 0.5));
-            let volume = 1_000_000.0 * rng.gen_range(0.5..2.0) * (1.0 + ret.abs() * 10.0);
+            let high: f64 = open.max(close) * (1.0 + rng.gen_range(0.0..volatility * 0.5));
+            let low: f64 = open.min(close) * (1.0 - rng.gen_range(0.0..volatility * 0.5));
+            let volume: f64 = 1_000_000.0 * rng.gen_range(0.5..2.0) * (1.0 + ret.abs() * 10.0);
 
             bars.push(OHLCV {
                 timestamp: current_time,

@@ -64,7 +64,7 @@ pub use analyzer::{CoTAnalyzer, CoTAnalysis, ReasoningStep};
 pub use signals::{SignalGenerator, CoTSignal, Signal};
 pub use position::{PositionSizer, PositionResult};
 pub use backtest::{Backtester, BacktestConfig, BacktestResult, Trade, TradeDirection};
-pub use data::{DataLoader, OHLCV, YahooLoader, BybitLoader, MockLoader};
+pub use data::{DataLoader, OHLCV, YahooLoader, BybitLoader, MockLoader, add_indicators, BarWithIndicators};
 pub use error::{Error, Result};
 
 /// Library version

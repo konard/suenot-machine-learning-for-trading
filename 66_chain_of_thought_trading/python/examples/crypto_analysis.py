@@ -48,46 +48,56 @@ def analyze_crypto(symbol: str, portfolio_value: float = 100000.0):
     print(f"  Volume Ratio:    {data['volume_ratio']:.2f}x")
 
     # Initialize components
-    analyzer = MockChainOfThoughtAnalyzer()
-    signal_gen = MultiStepSignalGenerator(analyzer)
+    signal_gen = MultiStepSignalGenerator()
     position_sizer = CoTPositionSizer(
-        max_position_pct=0.1,  # Max 10% per trade
-        max_risk_pct=0.02,    # Max 2% risk per trade
-        use_kelly=True,
+        account_size=portfolio_value,
+        max_risk_per_trade=0.02,   # Max 2% risk per trade
+        max_position_size=0.1,     # Max 10% per trade
     )
+
+    # Prepare price data dict
+    price_data = {
+        'open': data.get('open', data['current_price'] * 0.99),
+        'high': data.get('high', data['current_price'] * 1.01),
+        'low': data.get('low', data['current_price'] * 0.98),
+        'close': data['current_price'],
+        'prev_close': data['current_price'] * (1 - data['price_change_1d'] / 100),
+        'volume': data.get('volume', 1000000),
+        'avg_volume': data.get('avg_volume', 1000000),
+    }
+
+    # Prepare indicators dict
+    indicators = {
+        'rsi': data['rsi'],
+        'macd': data['macd'],
+        'macd_signal': data['macd_signal'],
+        'sma_20': data['sma_20'],
+        'sma_50': data['sma_50'],
+        'sma_200': data.get('sma_200', data['sma_50'] * 0.98),
+        'atr': data['atr'],
+    }
 
     # Generate trading signal
     print("\nGenerating Trading Signal...")
-    signal = signal_gen.generate_signal(
-        symbol=symbol,
-        current_price=data["current_price"],
-        rsi=data["rsi"],
-        macd=data["macd"],
-        macd_signal=data["macd_signal"],
-        sma_20=data["sma_20"],
-        sma_50=data["sma_50"],
-        volume_ratio=data["volume_ratio"],
-        atr=data["atr"],
-    )
+    signal = signal_gen.generate_signal(symbol, price_data, indicators)
 
     print(f"\n  Signal:          {signal.signal.name}")
     print(f"  Confidence:      {signal.confidence:.0%}")
 
     # Calculate position size
     print("\nCalculating Position Size...")
-    position = position_sizer.calculate_position(
-        signal=signal.signal.name,
-        confidence=signal.confidence,
+    position = position_sizer.calculate_position_size(
+        symbol=symbol,
         entry_price=data["current_price"],
         stop_loss=signal.stop_loss,
-        portfolio_value=portfolio_value,
+        signal_confidence=signal.confidence,
         volatility=data["atr"] / data["current_price"],
     )
 
-    print(f"\n  Position Size:   ${position.position_value:,.2f}")
-    print(f"  Units:           {position.units:.6f}")
+    print(f"\n  Position Size:   ${position.size_in_units * data['current_price']:,.2f}")
+    print(f"  Units:           {position.size_in_units:.6f}")
     print(f"  Risk Amount:     ${position.risk_amount:,.2f}")
-    print(f"  Portfolio %:     {position.position_pct:.1%}")
+    print(f"  Portfolio %:     {position.recommended_size:.1%}")
 
     # Display reasoning
     print("\nReasoning Chain:")
@@ -136,7 +146,7 @@ def main():
     for r in results:
         signal_name = r["signal"].signal.name
         confidence = r["signal"].confidence
-        position_val = r["position"].position_value
+        position_val = r["position"].size_in_units * r["data"]["current_price"]
         risk_val = r["position"].risk_amount
 
         print(f"{r['symbol']:<12} {signal_name:<12} {confidence:>10.0%} ${position_val:>12,.2f} ${risk_val:>10,.2f}")

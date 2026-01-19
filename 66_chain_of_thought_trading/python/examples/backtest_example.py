@@ -7,14 +7,13 @@ and analyze the results with full audit trail.
 """
 
 import sys
+import pandas as pd
 from datetime import datetime, timedelta
 
 # Add parent directory to path for imports
 sys.path.insert(0, "..")
 
-from cot_analyzer import MockChainOfThoughtAnalyzer
 from signal_generator import MultiStepSignalGenerator
-from position_sizer import CoTPositionSizer
 from backtest import CoTBacktester, BacktestConfig
 from data_loader import MockDataLoader, add_technical_indicators
 
@@ -44,14 +43,12 @@ def main():
     print(f"  Loaded {len(df)} data points")
     print(f"  Date range: {df['timestamp'].min()} to {df['timestamp'].max()}")
 
+    # Prepare DataFrame with datetime index for backtester
+    prices_df = df.set_index('timestamp')[['open', 'high', 'low', 'close', 'volume']]
+
     # Initialize components
     print("\nInitializing trading components...")
-    analyzer = MockChainOfThoughtAnalyzer()
-    signal_gen = MultiStepSignalGenerator(analyzer)
-    position_sizer = CoTPositionSizer(
-        max_position_pct=0.2,
-        max_risk_pct=0.02,
-    )
+    signal_gen = MultiStepSignalGenerator()
 
     # Configure backtest
     config = BacktestConfig(
@@ -63,16 +60,11 @@ def main():
 
     # Run backtest
     print("\nRunning backtest...")
-    backtester = CoTBacktester(
-        signal_generator=signal_gen,
-        position_sizer=position_sizer,
-        config=config,
-    )
+    backtester = CoTBacktester(config=config)
 
     result = backtester.run(
-        prices=df["close"].values,
-        timestamps=df["timestamp"].tolist(),
-        symbol=symbol,
+        prices=prices_df,
+        signal_generator=signal_gen,
     )
 
     # Display results
@@ -80,23 +72,26 @@ def main():
     print("Backtest Results")
     print("=" * 60)
 
+    metrics = result.metrics
     print(f"\nPerformance Metrics:")
-    print(f"  Total Return:      {result.total_return:.2%}")
-    print(f"  Annual Return:     {result.annual_return:.2%}")
-    print(f"  Sharpe Ratio:      {result.sharpe_ratio:.2f}")
-    print(f"  Max Drawdown:      {result.max_drawdown:.2%}")
-    print(f"  Win Rate:          {result.win_rate:.1%}")
-    print(f"  Profit Factor:     {result.profit_factor:.2f}")
+    print(f"  Total Return:      {metrics.get('total_return', 0):.2%}")
+    print(f"  Sharpe Ratio:      {metrics.get('sharpe_ratio', 0):.2f}")
+    print(f"  Max Drawdown:      {metrics.get('max_drawdown', 0):.2%}")
+    print(f"  Win Rate:          {metrics.get('win_rate', 0):.1%}")
+    print(f"  Profit Factor:     {metrics.get('profit_factor', 0):.2f}")
 
+    winning_trades = len([t for t in result.trades if t.pnl > 0])
+    losing_trades = len([t for t in result.trades if t.pnl <= 0])
     print(f"\nTrading Statistics:")
-    print(f"  Total Trades:      {result.total_trades}")
-    print(f"  Winning Trades:    {result.winning_trades}")
-    print(f"  Losing Trades:     {result.losing_trades}")
+    print(f"  Total Trades:      {metrics.get('num_trades', len(result.trades))}")
+    print(f"  Winning Trades:    {winning_trades}")
+    print(f"  Losing Trades:     {losing_trades}")
 
+    final_capital = metrics.get('final_equity', result.equity_curve.iloc[-1] if len(result.equity_curve) > 0 else initial_capital)
     print(f"\nCapital:")
     print(f"  Initial:           ${initial_capital:,.2f}")
-    print(f"  Final:             ${result.final_capital:,.2f}")
-    print(f"  Profit/Loss:       ${result.final_capital - initial_capital:,.2f}")
+    print(f"  Final:             ${final_capital:,.2f}")
+    print(f"  Profit/Loss:       ${final_capital - initial_capital:,.2f}")
 
     # Display trade log
     if result.trades:
@@ -125,24 +120,26 @@ def main():
         print("-" * 60)
         sample_trade = result.trades[0]
         print(f"Trade: {sample_trade.direction.name} at ${sample_trade.entry_price:.2f}")
-        print(f"Confidence: {sample_trade.confidence:.0%}")
-        print(f"\nReasoning:")
-        for i, reason in enumerate(sample_trade.reasoning_chain[:5], 1):
-            print(f"  {i}. {reason}")
+        if sample_trade.reasoning_chain:
+            print(f"\nReasoning:")
+            for i, reason in enumerate(sample_trade.reasoning_chain[:5], 1):
+                print(f"  {i}. {reason}")
+        else:
+            print("  (No reasoning chain available)")
 
     # Equity curve summary
     print(f"\nEquity Curve (monthly snapshots):")
     print("-" * 40)
 
-    # Show monthly equity values
-    equity_len = len(result.equity_curve)
-    step = max(1, equity_len // 12)
+    # Show monthly equity values (equity_curve is a pandas Series with datetime index)
+    if len(result.equity_curve) > 0:
+        equity_len = len(result.equity_curve)
+        step = max(1, equity_len // 12)
 
-    for i in range(0, equity_len, step):
-        date_idx = min(i, len(df) - 1)
-        date = df["timestamp"].iloc[date_idx]
-        equity = result.equity_curve[i]
-        print(f"  {date.strftime('%Y-%m')}: ${equity:,.2f}")
+        for i in range(0, equity_len, step):
+            date = result.equity_curve.index[i]
+            equity = result.equity_curve.iloc[i]
+            print(f"  {date.strftime('%Y-%m')}: ${equity:,.2f}")
 
     print("\n" + "=" * 60)
     print("Backtest complete!")

@@ -50,46 +50,59 @@ def main():
     print("\n4. Running Chain-of-Thought analysis...")
     analyzer = MockChainOfThoughtAnalyzer()
 
-    analysis = analyzer.analyze(
-        f"""
-        Analyze AAPL stock for trading:
-        - Current price: ${market_data['current_price']:.2f}
-        - 1-day change: {market_data['price_change_1d']:.2f}%
-        - 5-day change: {market_data['price_change_5d']:.2f}%
-        - 20-day change: {market_data['price_change_20d']:.2f}%
-        - RSI (14): {market_data['rsi']:.1f}
-        - MACD: {market_data['macd']:.4f}
-        - SMA 20: ${market_data['sma_20']:.2f}
-        - SMA 50: ${market_data['sma_50']:.2f}
-        - Volume ratio: {market_data['volume_ratio']:.2f}x average
-        """
-    )
+    # Prepare analysis data dict
+    analysis_data = {
+        "price": market_data['current_price'],
+        "change_24h": market_data['price_change_1d'],
+        "rsi": market_data['rsi'],
+        "macd": market_data['macd'],
+        "macd_signal": market_data['macd_signal'],
+        "sma_50": market_data['sma_50'],
+        "sma_200": market_data.get('sma_200', market_data['sma_50'] * 0.98),
+        "volume": market_data.get('volume', 1000000),
+        "atr": market_data['atr'],
+    }
+
+    analysis = analyzer.analyze("AAPL", analysis_data)
 
     print("\n   Reasoning Chain:")
-    for i, step in enumerate(analysis.reasoning_steps, 1):
-        print(f"   Step {i}: {step.step_name}")
-        print(f"           {step.reasoning[:80]}...")
+    for i, step in enumerate(analysis.steps, 1):
+        print(f"   Step {i}: {step.title}")
+        reasoning_preview = step.reasoning[:80] + "..." if len(step.reasoning) > 80 else step.reasoning
+        print(f"           {reasoning_preview}")
         print(f"           Conclusion: {step.conclusion}")
         print()
 
-    print(f"   Final Recommendation: {analysis.final_answer}")
+    print(f"   Final Recommendation: {analysis.final_signal}")
     print(f"   Confidence: {analysis.confidence:.0%}")
 
     # Step 5: Generate signal using multi-step generator
     print("\n5. Generating trading signal...")
-    generator = MultiStepSignalGenerator(analyzer)
+    generator = MultiStepSignalGenerator()
 
-    signal = generator.generate_signal(
-        symbol="AAPL",
-        current_price=market_data["current_price"],
-        rsi=market_data["rsi"],
-        macd=market_data["macd"],
-        macd_signal=market_data["macd_signal"],
-        sma_20=market_data["sma_20"],
-        sma_50=market_data["sma_50"],
-        volume_ratio=market_data["volume_ratio"],
-        atr=market_data["atr"],
-    )
+    # Prepare price data dict
+    price_data = {
+        'open': market_data.get('open', market_data['current_price'] * 0.99),
+        'high': market_data.get('high', market_data['current_price'] * 1.01),
+        'low': market_data.get('low', market_data['current_price'] * 0.98),
+        'close': market_data['current_price'],
+        'prev_close': market_data['current_price'] * (1 - market_data['price_change_1d'] / 100),
+        'volume': market_data.get('volume', 1000000),
+        'avg_volume': market_data.get('avg_volume', 1000000),
+    }
+
+    # Prepare indicators dict
+    indicators = {
+        'rsi': market_data['rsi'],
+        'macd': market_data['macd'],
+        'macd_signal': market_data['macd_signal'],
+        'sma_20': market_data['sma_20'],
+        'sma_50': market_data['sma_50'],
+        'sma_200': market_data.get('sma_200', market_data['sma_50'] * 0.98),
+        'atr': market_data['atr'],
+    }
+
+    signal = generator.generate_signal("AAPL", price_data, indicators)
 
     print(f"\n   Signal: {signal.signal.name}")
     print(f"   Confidence: {signal.confidence:.0%}")
