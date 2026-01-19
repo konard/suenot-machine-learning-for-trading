@@ -72,6 +72,9 @@ impl OHLCVBar {
 
     /// Calculate return from open to close
     pub fn bar_return(&self) -> f32 {
+        if self.open == 0.0 {
+            return 0.0;
+        }
         (self.close - self.open) / self.open
     }
 }
@@ -147,7 +150,13 @@ impl MarketData {
 
         self.bars
             .windows(2)
-            .map(|w| (w[1].close - w[0].close) / w[0].close)
+            .map(|w| {
+                if w[0].close == 0.0 {
+                    0.0
+                } else {
+                    (w[1].close - w[0].close) / w[0].close
+                }
+            })
             .collect()
     }
 

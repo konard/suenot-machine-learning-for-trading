@@ -3,7 +3,7 @@
 This chapter explores **Memory-Augmented Transformers**, a class of transformer architectures that augment standard attention mechanisms with external memory. These models can store and retrieve long-term patterns from historical data, making them particularly powerful for financial time series prediction where market regimes and patterns may repeat over extended periods.
 
 <p align="center">
-<img src="https://i.imgur.com/8YqKvPz.png" width="70%">
+<img src="https://i.imgur.com/8YqKvPz.png" width="70%" alt="Memory-Augmented Transformer Architecture Diagram showing input sequence, external memory bank, encoder layers with local attention and kNN memory retrieval, gating mechanism, and prediction head">
 </p>
 
 ## Contents

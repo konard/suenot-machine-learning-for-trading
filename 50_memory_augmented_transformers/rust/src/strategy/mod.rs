@@ -115,13 +115,15 @@ impl TradingStrategy {
     }
 
     /// Normalize input features
-    fn normalize_features(&self, features: &Array2<f32>) -> Array2<f32> {
+    pub fn normalize_features(&self, features: &Array2<f32>) -> Array2<f32> {
         match (&self.means, &self.stds) {
             (Some(means), Some(stds)) => {
                 let mut normalized = features.clone();
                 for j in 0..features.ncols() {
+                    // Guard against zero-variance features to avoid inf/NaN
+                    let denom = stds[j].abs().max(1e-8);
                     for i in 0..features.nrows() {
-                        normalized[[i, j]] = (features[[i, j]] - means[j]) / stds[j];
+                        normalized[[i, j]] = (features[[i, j]] - means[j]) / denom;
                     }
                 }
                 normalized
@@ -218,8 +220,10 @@ impl Backtester {
             return self.empty_result();
         }
 
-        // Fit normalization
-        strategy.fit(data);
+        // Fit normalization on data available before the first trade to avoid look-ahead bias
+        let fit_end = seq_len.min(data.bars.len());
+        let fit_data = MarketData::new(data.symbol.clone(), data.bars[..fit_end].to_vec());
+        strategy.fit(&fit_data);
 
         for i in seq_len..(features.nrows() - horizon) {
             let window = features.slice(ndarray::s![i - seq_len..i, ..]).to_owned();
@@ -466,6 +470,13 @@ pub fn walk_forward_backtest(
     train_ratio: f32,
 ) -> Vec<BacktestResult> {
     let n = data.len();
+    // Validate parameters to prevent divide-by-zero and invalid splits
+    if n == 0 || n_splits == 0 || n_splits > n {
+        return Vec::new();
+    }
+    if !(0.0..1.0).contains(&train_ratio) {
+        return Vec::new();
+    }
     let split_size = n / n_splits;
     let mut results = Vec::new();
 
@@ -497,14 +508,19 @@ pub fn walk_forward_backtest(
             backtest_config.clone(),
         );
 
-        // Populate memory from training data
+        // Fit normalization on training data before populating memory
+        strategy.fit(&train_data);
+
+        // Populate memory from training data (use same normalization as backtest)
         let (train_seqs, train_targets) = train_data.create_sequences(
             backtest_config.seq_len,
             backtest_config.horizon,
         );
 
         for (seq, target) in train_seqs.iter().zip(train_targets.iter()) {
-            let embedding = strategy.model().get_embedding(seq);
+            // Normalize before embedding to ensure consistent scale with backtest
+            let normalized = strategy.normalize_features(seq);
+            let embedding = strategy.model().get_embedding(&normalized);
             let _ = strategy.memory.add(embedding.to_vec(), 0, Some(*target));
         }
 

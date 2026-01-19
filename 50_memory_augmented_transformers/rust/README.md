@@ -91,7 +91,7 @@ println!("Max Drawdown: {:.2}%", result.max_drawdown * 100.0);
 
 ## Module Structure
 
-```
+```text
 rust/
 ├── Cargo.toml
 ├── README.md

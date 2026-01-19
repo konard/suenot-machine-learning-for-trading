@@ -141,13 +141,13 @@ class KNNMemoryLayer(nn.Module):
 
     def forward(
         self,
-        x: torch.Tensor,
+        _x: torch.Tensor,
         memory_values: torch.Tensor,
         memory_scores: torch.Tensor
     ) -> torch.Tensor:
         """
         Args:
-            x: Current representations [batch, seq_len, d_model]
+            _x: Current representations [batch, seq_len, d_model] (unused, for interface consistency)
             memory_values: Retrieved values [batch, seq_len, k, d_model]
             memory_scores: Similarity scores [batch, seq_len, k]
 
@@ -355,8 +355,6 @@ class MemoryAugmentedTransformer(nn.Module):
                 - last_hidden: Last position hidden state
                 - attention_weights: Optional attention information
         """
-        batch_size = x.size(0)
-
         # Encode
         x = self.token_embedding(x)
         x = self.position_encoding(x)
@@ -434,7 +432,9 @@ class MemoryAugmentedTransformer(nn.Module):
             target_classes[targets < -0.001] = 0  # Down
             target_classes[targets > 0.001] = 2   # Up
             target_classes[(targets >= -0.001) & (targets <= 0.001)] = 1  # Neutral
-            return F.cross_entropy(predictions, target_classes)
+            # predictions are already softmaxed, use nll_loss with log probabilities
+            log_probs = predictions.clamp_min(1e-9).log()
+            return F.nll_loss(log_probs, target_classes)
 
         elif self.config.output_type == OutputType.PORTFOLIO:
             if returns is None:

@@ -31,7 +31,6 @@ class ExternalMemoryBank:
     - FIFO replacement when memory is full
     - GPU acceleration if available
     - Metadata storage for interpretability
-    - Thread-safe operations
 
     Example:
         config = MemoryConfig(memory_size=10000, dim=64)
@@ -318,14 +317,17 @@ class RegimeAwareMemory(ExternalMemoryBank):
         """Add entries with regime labels"""
         n = keys.shape[0]
 
-        # Store regimes before calling parent add
-        for i in range(n):
-            pos = (self.write_pos + i) % self.memory_size
-            if i < len(regimes):
-                self.regimes[pos] = regimes[i]
+        # Capture write_pos before adding
+        start_pos = self.write_pos
 
         # Call parent add
         self.add(keys, values, timestamps, returns)
+
+        # Store regimes at the positions where entries were actually written
+        for i in range(n):
+            pos = (start_pos + i) % self.memory_size
+            if i < len(regimes):
+                self.regimes[pos] = regimes[i]
 
     def get_regime_distribution(self, indices: np.ndarray) -> Dict[str, float]:
         """
