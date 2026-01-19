@@ -1,0 +1,78 @@
+[package]
+name = "cot_trading"
+version = "0.1.0"
+edition = "2021"
+authors = ["Chain-of-Thought Trading Contributors"]
+description = "Chain-of-Thought trading toolkit for explainable AI trading decisions"
+license = "MIT"
+readme = "README.md"
+
+[lib]
+name = "cot_trading"
+path = "src/lib.rs"
+
+[[bin]]
+name = "cot_analysis_demo"
+path = "src/bin/cot_analysis_demo.rs"
+
+[[bin]]
+name = "signal_demo"
+path = "src/bin/signal_demo.rs"
+
+[[bin]]
+name = "backtest_demo"
+path = "src/bin/backtest_demo.rs"
+
+[[bin]]
+name = "crypto_demo"
+path = "src/bin/crypto_demo.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# HTTP client for API calls
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Date/time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Async traits
+async-trait = "0.1"
+
+# Numeric operations
+ndarray = "0.15"
+statrs = "0.16"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Configuration
+config = "0.14"
+
+# Command line parsing
+clap = { version = "4.4", features = ["derive"] }
+
+# Random number generation
+rand = "0.8"
+
+[dev-dependencies]
+tokio-test = "0.4"
+criterion = "0.5"
+
+[features]
+default = []
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
