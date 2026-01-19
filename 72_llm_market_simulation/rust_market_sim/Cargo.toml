@@ -1,0 +1,73 @@
+[package]
+name = "llm-market-sim"
+version = "0.1.0"
+edition = "2021"
+authors = ["ML Trading Examples"]
+description = "LLM Market Simulation - Multi-agent trading simulation with Bybit integration"
+readme = "README.md"
+license = "MIT"
+keywords = ["market-simulation", "trading", "multi-agent", "bybit", "llm"]
+
+[dependencies]
+# HTTP client for Bybit API
+reqwest = { version = "0.12", features = ["json"] }
+
+# Math and arrays
+ndarray = { version = "0.16", features = ["serde"] }
+ndarray-stats = "0.6"
+
+# Random number generation
+rand = "0.8"
+rand_distr = "0.4"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging
+log = "0.4"
+env_logger = "0.11"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# UUID for order IDs
+uuid = { version = "1.0", features = ["v4"] }
+
+# Statistics
+statrs = "0.17"
+
+# CLI
+clap = { version = "4.5", features = ["derive"] }
+
+# Progress bars
+indicatif = "0.17"
+
+[dev-dependencies]
+tokio-test = "0.4"
+approx = "0.5"
+
+[[bin]]
+name = "llm-market-sim"
+path = "src/main.rs"
+
+[[example]]
+name = "basic_simulation"
+path = "examples/basic_simulation.rs"
+
+[[example]]
+name = "bybit_data"
+path = "examples/bybit_data.rs"
+
+[[example]]
+name = "bubble_detection"
+path = "examples/bubble_detection.rs"
