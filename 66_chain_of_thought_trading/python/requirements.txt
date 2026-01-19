@@ -1,0 +1,29 @@
+# Chain-of-Thought Trading Dependencies
+
+# Core dependencies
+numpy>=1.21.0
+pandas>=1.3.0
+requests>=2.25.0
+
+# Data sources
+yfinance>=0.2.0  # Yahoo Finance data
+
+# LLM integration (optional - for real CoT analysis)
+openai>=1.0.0
+anthropic>=0.20.0
+
+# Technical analysis (optional)
+ta>=0.10.0  # Technical Analysis library
+
+# Visualization (optional)
+matplotlib>=3.4.0
+plotly>=5.0.0
+
+# Testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+
+# Development
+black>=23.0.0
+ruff>=0.1.0
+mypy>=1.0.0
