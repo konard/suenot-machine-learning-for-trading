@@ -2093,30 +2093,16 @@ See [rust/](rust/) for complete Rust implementation with async prompt handling.
 rust/
 ├── Cargo.toml
 ├── README.md
-├── src/
-│   ├── lib.rs              # Main library exports
-│   ├── prompts/            # Prompt templates
-│   │   ├── mod.rs
-│   │   ├── sentiment.rs    # Sentiment analysis prompts
-│   │   ├── signals.rs      # Trading signal prompts
-│   │   └── regime.rs       # Regime detection prompts
-│   ├── llm/                # LLM client
-│   │   ├── mod.rs
-│   │   ├── client.rs       # HTTP client for LLM API
-│   │   └── response.rs     # Response parsing
-│   ├── analysis/           # Analysis modules
-│   │   ├── mod.rs
-│   │   ├── sentiment.rs    # Sentiment analyzer
-│   │   ├── signals.rs      # Signal generator
-│   │   └── regime.rs       # Regime detector
-│   └── backtest/           # Backtesting engine
-│       ├── mod.rs
-│       ├── engine.rs       # Core backtesting
-│       └── metrics.rs      # Performance metrics
-└── examples/
-    ├── sentiment.rs        # Sentiment analysis demo
-    ├── signals.rs          # Signal generation demo
-    └── backtest.rs         # Full backtest demo
+└── src/
+    ├── lib.rs              # Main library exports
+    ├── prompts.rs          # Prompt templates for all trading tasks
+    ├── llm_client.rs       # Async HTTP client for LLM APIs
+    ├── sentiment.rs        # Sentiment analysis module
+    ├── signals.rs          # Trading signal generation
+    ├── regime.rs           # Market regime detection
+    ├── backtest.rs         # Backtesting engine with metrics
+    ├── data.rs             # Mock data loader with indicators
+    └── error.rs            # Error types
 ```
 
 ### Quick Start (Rust)
@@ -2124,14 +2110,14 @@ rust/
 ```bash
 cd rust
 
-# Run sentiment analysis example
-cargo run --example sentiment
+# Build the library
+cargo build
 
-# Generate trading signals
-cargo run --example signals -- --symbol BTCUSDT
+# Run tests
+cargo test
 
-# Run backtest
-cargo run --example backtest -- --start 2024-01-01 --end 2024-06-30
+# Use the library in your code
+# See rust/README.md for usage examples
 ```
 
 ## Python Implementation

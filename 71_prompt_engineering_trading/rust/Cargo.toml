@@ -32,15 +32,3 @@ futures = "0.3"
 
 [dev-dependencies]
 tokio-test = "0.4"
-
-[[example]]
-name = "sentiment_demo"
-path = "examples/sentiment_demo.rs"
-
-[[example]]
-name = "signal_demo"
-path = "examples/signal_demo.rs"
-
-[[example]]
-name = "full_pipeline"
-path = "examples/full_pipeline.rs"

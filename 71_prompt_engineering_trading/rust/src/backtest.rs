@@ -531,6 +531,7 @@ impl Backtester {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::Duration;
 
     fn create_test_signal(symbol: &str, direction: SignalDirection, price: f64) -> TradingSignal {
         TradingSignal {

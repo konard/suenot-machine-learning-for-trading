@@ -159,7 +159,7 @@ class LLMSignalBacktester:
             self._update_positions(price_data, signal.timestamp)
 
             # Process new signal
-            if signal.direction != SignalDirection.HOLD:
+            if signal.direction != SignalDirection.FLAT:
                 self._process_signal(signal, current_price)
 
             # Record equity
@@ -194,7 +194,7 @@ class LLMSignalBacktester:
             return
 
         # Check if short allowed
-        if signal.direction == SignalDirection.SELL and not self.config.allow_short:
+        if signal.direction == SignalDirection.SHORT and not self.config.allow_short:
             return
 
         # Calculate position size
@@ -202,7 +202,7 @@ class LLMSignalBacktester:
 
         # Apply commission and slippage
         entry_price = price * (1 + self.config.slippage_pct)
-        if signal.direction == SignalDirection.SELL:
+        if signal.direction == SignalDirection.SHORT:
             entry_price = price * (1 - self.config.slippage_pct)
 
         size = position_value / entry_price
@@ -216,7 +216,7 @@ class LLMSignalBacktester:
             entry_time=signal.timestamp,
             size=size,
             stop_loss=signal.stop_loss if self.config.use_stop_loss else None,
-            take_profit=signal.take_profit if self.config.use_take_profit else None,
+            take_profit=signal.take_profit[0] if self.config.use_take_profit and signal.take_profit else None,
             llm_confidence=signal.confidence,
             llm_reasoning=signal.reasoning
         )
@@ -242,16 +242,16 @@ class LLMSignalBacktester:
 
             # Check stop loss
             if trade.stop_loss:
-                if trade.direction == SignalDirection.BUY and current_price <= trade.stop_loss:
+                if trade.direction == SignalDirection.LONG and current_price <= trade.stop_loss:
                     symbols_to_close.append((symbol, current_price, "stop_loss"))
-                elif trade.direction == SignalDirection.SELL and current_price >= trade.stop_loss:
+                elif trade.direction == SignalDirection.SHORT and current_price >= trade.stop_loss:
                     symbols_to_close.append((symbol, current_price, "stop_loss"))
 
             # Check take profit
             if trade.take_profit:
-                if trade.direction == SignalDirection.BUY and current_price >= trade.take_profit:
+                if trade.direction == SignalDirection.LONG and current_price >= trade.take_profit:
                     symbols_to_close.append((symbol, current_price, "take_profit"))
-                elif trade.direction == SignalDirection.SELL and current_price <= trade.take_profit:
+                elif trade.direction == SignalDirection.SHORT and current_price <= trade.take_profit:
                     symbols_to_close.append((symbol, current_price, "take_profit"))
 
         for symbol, price, reason in symbols_to_close:
@@ -272,11 +272,11 @@ class LLMSignalBacktester:
 
         # Apply slippage
         exit_price = price * (1 - self.config.slippage_pct)
-        if trade.direction == SignalDirection.SELL:
+        if trade.direction == SignalDirection.SHORT:
             exit_price = price * (1 + self.config.slippage_pct)
 
         # Calculate P&L
-        if trade.direction == SignalDirection.BUY:
+        if trade.direction == SignalDirection.LONG:
             pnl = (exit_price - trade.entry_price) * trade.size
         else:
             pnl = (trade.entry_price - exit_price) * trade.size
@@ -345,7 +345,7 @@ class LLMSignalBacktester:
             if symbol in price_data:
                 current_price = self._get_price_at_time(price_data[symbol], current_time)
                 if current_price:
-                    if trade.direction == SignalDirection.BUY:
+                    if trade.direction == SignalDirection.LONG:
                         unrealized = (current_price - trade.entry_price) * trade.size
                     else:
                         unrealized = (trade.entry_price - current_price) * trade.size
@@ -598,7 +598,7 @@ class WalkForwardOptimizer:
 async def main():
     """Demo of backtesting."""
     from datetime import datetime, timedelta
-    from .signal_generator import PromptBasedSignalGenerator, TradingSignal, SignalDirection
+    from .signal_generator import PromptBasedSignalGenerator, TradingSignal, SignalDirection, SignalStrength
     from .llm_client import MockLLMClient
 
     # Create mock signals
@@ -606,34 +606,40 @@ async def main():
     signals = [
         TradingSignal(
             symbol="AAPL",
-            direction=SignalDirection.BUY,
+            direction=SignalDirection.LONG,
+            strength=SignalStrength.STRONG,
             confidence=80,
             entry_price=185.0,
+            entry_type="MARKET",
             stop_loss=180.0,
-            take_profit=195.0,
-            timeframe="1d",
+            take_profit=[195.0],
+            position_size_pct=0.1,
             reasoning="Strong earnings report",
             timestamp=base_time
         ),
         TradingSignal(
             symbol="AAPL",
-            direction=SignalDirection.SELL,
+            direction=SignalDirection.SHORT,
+            strength=SignalStrength.MODERATE,
             confidence=75,
             entry_price=192.0,
+            entry_type="MARKET",
             stop_loss=197.0,
-            take_profit=182.0,
-            timeframe="1d",
+            take_profit=[182.0],
+            position_size_pct=0.1,
             reasoning="Technical resistance reached",
             timestamp=base_time + timedelta(days=5)
         ),
         TradingSignal(
             symbol="MSFT",
-            direction=SignalDirection.BUY,
+            direction=SignalDirection.LONG,
+            strength=SignalStrength.STRONG,
             confidence=85,
             entry_price=380.0,
+            entry_type="MARKET",
             stop_loss=370.0,
-            take_profit=400.0,
-            timeframe="1d",
+            take_profit=[400.0],
+            position_size_pct=0.1,
             reasoning="AI momentum play",
             timestamp=base_time + timedelta(days=2)
         )

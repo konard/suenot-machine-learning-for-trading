@@ -42,37 +42,41 @@ async def basic_signal_demo():
     generator = PromptBasedSignalGenerator(client)
 
     # Technical data for analysis
+    symbol = "AAPL"
     technical_data = {
-        "symbol": "AAPL",
-        "current_price": 185.50,
-        "sma_20": 183.20,
-        "sma_50": 180.50,
-        "sma_200": 175.00,
-        "rsi": 35,
-        "macd": 0.5,
-        "macd_signal": 0.2,
-        "volume": 45000000,
-        "avg_volume": 50000000,
-        "support": 180.00,
-        "resistance": 195.00,
-        "atr": 3.50,
-        "trend": "BULLISH"
+        "price": {"current": 185.50, "change_24h": 1.2, "change_7d": 2.5, "change_30d": 5.0},
+        "technicals": {
+            "sma_20": 183.20,
+            "sma_50": 180.50,
+            "sma_200": 175.00,
+            "rsi": 35,
+            "macd": 0.5,
+            "atr": 3.50
+        },
+        "volume": {"current": 45000000, "average": 50000000},
+        "sentiment": "BULLISH",
+        "regime": "RISK_ON_TRENDING"
     }
 
-    print(f"\nGenerating signal for {technical_data['symbol']}...")
-    print(f"Current Price: ${technical_data['current_price']}")
-    print(f"RSI: {technical_data['rsi']}")
-    print(f"Trend: {technical_data['trend']}")
+    print(f"\nGenerating signal for {symbol}...")
+    print(f"Current Price: ${technical_data['price']['current']}")
+    print(f"RSI: {technical_data['technicals']['rsi']}")
+    print(f"Sentiment: {technical_data['sentiment']}")
 
-    signal = await generator.generate_signal(technical_data)
+    signal = await generator.generate_signal(symbol, technical_data)
 
     print(f"\n--- Generated Signal ---")
     print(f"Direction: {signal.direction.value}")
     print(f"Confidence: {signal.confidence}%")
-    print(f"Entry: ${signal.entry_price:.2f}")
+    if signal.entry_price:
+        print(f"Entry: ${signal.entry_price:.2f}")
     print(f"Stop Loss: ${signal.stop_loss:.2f}")
-    print(f"Take Profit: ${signal.take_profit:.2f}")
-    print(f"Risk/Reward: {abs(signal.take_profit - signal.entry_price) / abs(signal.entry_price - signal.stop_loss):.2f}")
+    if signal.take_profit:
+        tp = signal.take_profit[0] if signal.take_profit else 0
+        print(f"Take Profit: ${tp:.2f}")
+        if signal.entry_price and signal.stop_loss:
+            rr = abs(tp - signal.entry_price) / abs(signal.entry_price - signal.stop_loss)
+            print(f"Risk/Reward: {rr:.2f}")
     print(f"Reasoning: {signal.reasoning}")
 
 
@@ -102,19 +106,29 @@ async def news_signal_demo():
     headline = "Microsoft announces $10B AI infrastructure investment with OpenAI"
     symbol = "MSFT"
     current_price = 380.00
+    pre_news_price = 375.00  # Price before news
+    source = "Reuters"
+    category = "technology"
 
     print(f"\nHeadline: {headline}")
     print(f"Symbol: {symbol}")
     print(f"Current Price: ${current_price}")
+    print(f"Pre-News Price: ${pre_news_price}")
 
-    signal = await generator.generate_news_signal(headline, symbol, current_price)
+    signal = await generator.generate_news_signal(
+        symbol, headline, current_price, pre_news_price, source, category
+    )
 
     print(f"\n--- News Signal ---")
     print(f"Direction: {signal.direction.value}")
     print(f"Confidence: {signal.confidence}%")
-    print(f"Entry: ${signal.entry_price:.2f}")
-    print(f"Target: ${signal.take_profit:.2f} (+{((signal.take_profit/signal.entry_price)-1)*100:.1f}%)")
-    print(f"Stop: ${signal.stop_loss:.2f} ({((signal.stop_loss/signal.entry_price)-1)*100:.1f}%)")
+    if signal.entry_price:
+        print(f"Entry: ${signal.entry_price:.2f}")
+    if signal.take_profit:
+        tp = signal.take_profit[0] if signal.take_profit else 0
+        if signal.entry_price:
+            print(f"Target: ${tp:.2f} (+{((tp/signal.entry_price)-1)*100:.1f}%)")
+            print(f"Stop: ${signal.stop_loss:.2f} ({((signal.stop_loss/signal.entry_price)-1)*100:.1f}%)")
 
 
 async def multi_timeframe_demo():
@@ -145,51 +159,46 @@ async def multi_timeframe_demo():
     generator = PromptBasedSignalGenerator(client, prompt_type="multi_timeframe")
 
     # Multi-timeframe data
+    symbol = "BTC/USDT"
+    current_price = 45500.00
     timeframe_data = {
-        "symbol": "BTC/USDT",
-        "short_term": {
-            "timeframe": "1h",
+        "short": {
             "trend": "BULLISH",
-            "rsi": 55,
-            "momentum": "POSITIVE"
+            "momentum": "POSITIVE",
+            "level": "ABOVE_MA"
         },
-        "medium_term": {
-            "timeframe": "4h",
+        "medium": {
             "trend": "BULLISH",
-            "rsi": 60,
-            "momentum": "POSITIVE"
+            "momentum": "POSITIVE",
+            "level": "AT_SUPPORT"
         },
-        "long_term": {
-            "timeframe": "1d",
+        "long": {
             "trend": "NEUTRAL",
-            "rsi": 52,
-            "momentum": "FLAT"
-        },
-        "current_price": 45500.00,
-        "key_levels": {
-            "support_1": 44000,
-            "support_2": 42500,
-            "resistance_1": 47000,
-            "resistance_2": 50000
+            "momentum": "FLAT",
+            "level": "MID_RANGE"
         }
     }
+    sentiment = "BULLISH"
 
-    print(f"\nSymbol: {timeframe_data['symbol']}")
-    print(f"Current Price: ${timeframe_data['current_price']:,.2f}")
+    print(f"\nSymbol: {symbol}")
+    print(f"Current Price: ${current_price:,.2f}")
     print("\nTimeframe Analysis:")
-    for tf in ['short_term', 'medium_term', 'long_term']:
-        data = timeframe_data[tf]
-        print(f"  {data['timeframe']}: {data['trend']} (RSI: {data['rsi']})")
+    for tf_name, tf_data in timeframe_data.items():
+        print(f"  {tf_name}: {tf_data['trend']} (Momentum: {tf_data['momentum']})")
 
-    signal = await generator.generate_multi_timeframe_signal(timeframe_data)
+    signal = await generator.generate_multi_timeframe_signal(
+        symbol, timeframe_data, current_price, sentiment
+    )
 
     print(f"\n--- Multi-Timeframe Signal ---")
     print(f"Direction: {signal.direction.value}")
     print(f"Confidence: {signal.confidence}%")
-    print(f"Recommended Timeframe: {signal.timeframe}")
-    print(f"Entry: ${signal.entry_price:,.2f}")
+    if signal.entry_price:
+        print(f"Entry: ${signal.entry_price:,.2f}")
     print(f"Stop: ${signal.stop_loss:,.2f}")
-    print(f"Target: ${signal.take_profit:,.2f}")
+    if signal.take_profit:
+        tp = signal.take_profit[0] if signal.take_profit else 0
+        print(f"Target: ${tp:,.2f}")
 
 
 async def self_consistent_signal_demo():
@@ -214,27 +223,26 @@ async def self_consistent_signal_demo():
     client = MockLLMClient(responses=mock_responses)
     generator = PromptBasedSignalGenerator(client)
 
+    symbol = "GOOGL"
     technical_data = {
-        "symbol": "GOOGL",
-        "current_price": 140.00,
-        "sma_20": 139.50,
-        "sma_50": 141.00,
-        "sma_200": 135.00,
-        "rsi": 50,
-        "macd": 0.1,
-        "macd_signal": 0.15,
-        "volume": 25000000,
-        "avg_volume": 28000000,
-        "support": 135.00,
-        "resistance": 145.00,
-        "atr": 2.50,
-        "trend": "NEUTRAL"
+        "price": {"current": 140.00, "change_24h": 0.5, "change_7d": -1.0, "change_30d": 2.0},
+        "technicals": {
+            "sma_20": 139.50,
+            "sma_50": 141.00,
+            "sma_200": 135.00,
+            "rsi": 50,
+            "macd": 0.1,
+            "atr": 2.50
+        },
+        "volume": {"current": 25000000, "average": 28000000},
+        "sentiment": "NEUTRAL",
+        "regime": "RANGING"
     }
 
-    print(f"\nGenerating self-consistent signal for {technical_data['symbol']}...")
+    print(f"\nGenerating self-consistent signal for {symbol}...")
     print("(Running 3 samples for consensus)")
 
-    signal = await generator.self_consistent_signal(technical_data, num_samples=3)
+    signal = await generator.self_consistent_signal(symbol, technical_data, num_samples=3)
 
     print(f"\n--- Consensus Signal ---")
     print(f"Direction: {signal.direction.value}")
@@ -266,41 +274,43 @@ async def crypto_signal_demo():
     generator = PromptBasedSignalGenerator(client)
 
     # Crypto-specific data (as would come from Bybit)
+    symbol = "ETH/USDT"
     crypto_data = {
-        "symbol": "ETH/USDT",
-        "current_price": 2500.00,
-        "sma_20": 2450.00,
-        "sma_50": 2380.00,
-        "sma_200": 2200.00,
-        "rsi": 58,
-        "macd": 15.0,
-        "macd_signal": 10.0,
-        "volume": 1500000000,  # 24h volume
-        "avg_volume": 1200000000,
-        "support": 2400.00,
-        "resistance": 2700.00,
-        "atr": 80.00,
-        "trend": "BULLISH",
+        "price": {"current": 2500.00, "change_24h": 3.5, "change_7d": 5.0, "change_30d": 10.0},
+        "technicals": {
+            "sma_20": 2450.00,
+            "sma_50": 2380.00,
+            "sma_200": 2200.00,
+            "rsi": 58,
+            "macd": 15.0,
+            "atr": 80.00
+        },
+        "volume": {"current": 1500000000, "average": 1200000000},
+        "sentiment": "BULLISH",
+        "regime": "RISK_ON_TRENDING",
         # Crypto-specific metrics
         "funding_rate": 0.0001,  # 0.01%
         "open_interest": 5000000000,
         "long_short_ratio": 1.2
     }
 
-    print(f"\nSymbol: {crypto_data['symbol']}")
-    print(f"Price: ${crypto_data['current_price']:,.2f}")
+    print(f"\nSymbol: {symbol}")
+    print(f"Price: ${crypto_data['price']['current']:,.2f}")
     print(f"Funding Rate: {crypto_data['funding_rate']*100:.4f}%")
     print(f"Open Interest: ${crypto_data['open_interest']/1e9:.2f}B")
     print(f"Long/Short Ratio: {crypto_data['long_short_ratio']:.2f}")
 
-    signal = await generator.generate_signal(crypto_data)
+    signal = await generator.generate_signal(symbol, crypto_data)
 
     print(f"\n--- Crypto Signal ---")
     print(f"Direction: {signal.direction.value}")
     print(f"Confidence: {signal.confidence}%")
-    print(f"Entry: ${signal.entry_price:,.2f}")
-    print(f"Stop: ${signal.stop_loss:,.2f} ({((signal.stop_loss/signal.entry_price)-1)*100:.1f}%)")
-    print(f"Target: ${signal.take_profit:,.2f} (+{((signal.take_profit/signal.entry_price)-1)*100:.1f}%)")
+    if signal.entry_price:
+        print(f"Entry: ${signal.entry_price:,.2f}")
+        print(f"Stop: ${signal.stop_loss:,.2f} ({((signal.stop_loss/signal.entry_price)-1)*100:.1f}%)")
+        if signal.take_profit:
+            tp = signal.take_profit[0] if signal.take_profit else 0
+            print(f"Target: ${tp:,.2f} (+{((tp/signal.entry_price)-1)*100:.1f}%)")
 
 
 async def main():

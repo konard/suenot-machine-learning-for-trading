@@ -14,8 +14,8 @@ from datetime import datetime, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from backtest import LLMSignalBacktester, BacktestConfig, WalkForwardOptimizer
-from signal_generator import TradingSignal, SignalDirection
+from backtest import LLMSignalBacktester, BacktestConfig
+from signal_generator import TradingSignal, SignalDirection, SignalStrength
 from data_loader import MockDataLoader
 
 
@@ -30,54 +30,66 @@ async def basic_backtest_demo():
     signals = [
         TradingSignal(
             symbol="AAPL",
-            direction=SignalDirection.BUY,
+            direction=SignalDirection.LONG,
+            strength=SignalStrength.STRONG,
             confidence=85,
             entry_price=185.00,
+            entry_type="MARKET",
             stop_loss=178.00,
-            take_profit=198.00,
-            timeframe="1d",
+            take_profit=[198.00],
+            position_size_pct=0.1,
             reasoning="Strong earnings momentum",
             timestamp=base_time
         ),
         TradingSignal(
             symbol="AAPL",
-            direction=SignalDirection.SELL,
+            direction=SignalDirection.SHORT,
+            strength=SignalStrength.MODERATE,
             confidence=72,
             entry_price=195.00,
+            entry_type="MARKET",
             stop_loss=202.00,
-            take_profit=182.00,
-            timeframe="1d",
+            take_profit=[182.00],
+            position_size_pct=0.1,
             reasoning="Resistance reached, taking profits",
             timestamp=base_time + timedelta(days=7)
         ),
         TradingSignal(
             symbol="MSFT",
-            direction=SignalDirection.BUY,
+            direction=SignalDirection.LONG,
+            strength=SignalStrength.STRONG,
             confidence=78,
             entry_price=380.00,
+            entry_type="MARKET",
             stop_loss=365.00,
-            take_profit=405.00,
-            timeframe="1d",
+            take_profit=[405.00],
+            position_size_pct=0.1,
             reasoning="AI momentum play",
             timestamp=base_time + timedelta(days=3)
         ),
         TradingSignal(
             symbol="GOOGL",
-            direction=SignalDirection.BUY,
+            direction=SignalDirection.LONG,
+            strength=SignalStrength.MODERATE,
             confidence=65,
             entry_price=140.00,
+            entry_type="MARKET",
             stop_loss=135.00,
-            take_profit=150.00,
-            timeframe="1d",
+            take_profit=[150.00],
+            position_size_pct=0.1,
             reasoning="Undervalued relative to peers",
             timestamp=base_time + timedelta(days=5)
         ),
         TradingSignal(
             symbol="MSFT",
-            direction=SignalDirection.HOLD,
+            direction=SignalDirection.FLAT,
+            strength=SignalStrength.WEAK,
             confidence=55,
             entry_price=390.00,
-            timeframe="1d",
+            entry_type="MARKET",
+            stop_loss=385.00,
+            take_profit=[395.00],
+            position_size_pct=0.0,
             reasoning="Wait for clearer direction",
             timestamp=base_time + timedelta(days=10)
         )
@@ -148,7 +160,7 @@ async def trade_analysis_demo(result):
 
     for i, trade in enumerate(result.trades, 1):
         pnl_emoji = "+" if trade.pnl > 0 else "-"
-        direction = "LONG" if trade.direction == SignalDirection.BUY else "SHORT"
+        direction = "LONG" if trade.direction == SignalDirection.LONG else "SHORT"
 
         print(f"Trade #{i}: {trade.symbol} ({direction})")
         print(f"  Entry: ${trade.entry_price:.2f} @ {trade.entry_time}")
@@ -197,34 +209,40 @@ async def crypto_backtest_demo():
     signals = [
         TradingSignal(
             symbol="BTC/USDT",
-            direction=SignalDirection.BUY,
+            direction=SignalDirection.LONG,
+            strength=SignalStrength.STRONG,
             confidence=80,
             entry_price=42000.00,
+            entry_type="MARKET",
             stop_loss=40000.00,
-            take_profit=46000.00,
-            timeframe="4h",
+            take_profit=[46000.00],
+            position_size_pct=0.05,
             reasoning="Breakout above resistance with volume",
             timestamp=base_time
         ),
         TradingSignal(
             symbol="ETH/USDT",
-            direction=SignalDirection.BUY,
+            direction=SignalDirection.LONG,
+            strength=SignalStrength.MODERATE,
             confidence=75,
             entry_price=2300.00,
+            entry_type="MARKET",
             stop_loss=2200.00,
-            take_profit=2500.00,
-            timeframe="4h",
+            take_profit=[2500.00],
+            position_size_pct=0.05,
             reasoning="Following BTC momentum",
             timestamp=base_time + timedelta(hours=4)
         ),
         TradingSignal(
             symbol="BTC/USDT",
-            direction=SignalDirection.SELL,
+            direction=SignalDirection.SHORT,
+            strength=SignalStrength.MODERATE,
             confidence=70,
             entry_price=45000.00,
+            entry_type="MARKET",
             stop_loss=47000.00,
-            take_profit=42000.00,
-            timeframe="4h",
+            take_profit=[42000.00],
+            position_size_pct=0.05,
             reasoning="Overbought on multiple timeframes",
             timestamp=base_time + timedelta(days=3)
         )
