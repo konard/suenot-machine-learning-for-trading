@@ -122,9 +122,10 @@ def main():
     print("Session activity by hour (stock, EST = UTC-5):")
     for h in [9, 14, 17, 21]:  # UTC hours
         est_h = (h - 5) % 24
-        if 4 <= est_h < 9.5:
+        # Match the session_idx logic above (integer hour boundaries)
+        if 4 <= est_h < 9:
             sess_name = "Pre-market"
-        elif 9.5 <= est_h < 16:
+        elif 9 <= est_h < 16:
             sess_name = "Regular"
         elif 16 <= est_h < 20:
             sess_name = "After-hours"

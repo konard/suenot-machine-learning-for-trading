@@ -130,7 +130,27 @@ impl TimeSeriesSinusoidalEncoding {
     }
 
     /// Create with custom frequency scales
+    ///
+    /// # Panics
+    ///
+    /// Panics if:
+    /// - `scales` is empty
+    /// - `d_model` is not divisible by `scales.len()`
+    /// - `d_model / scales.len()` (dims per scale) is odd
     pub fn with_scales(d_model: usize, scales: Vec<f64>) -> Self {
+        assert!(!scales.is_empty(), "scales must not be empty");
+        assert!(
+            d_model % scales.len() == 0,
+            "d_model ({}) must be divisible by scales.len() ({})",
+            d_model,
+            scales.len()
+        );
+        let dims_per_scale = d_model / scales.len();
+        assert!(
+            dims_per_scale % 2 == 0,
+            "dims_per_scale ({}) must be even for sin/cos pairs",
+            dims_per_scale
+        );
         Self { d_model, scales }
     }
 
@@ -401,7 +421,27 @@ impl RotaryEncoding {
     }
 
     /// Apply rotary encoding to a batch of vectors
+    ///
+    /// # Panics
+    ///
+    /// Panics if:
+    /// - `positions.len()` does not match `x.nrows()` (batch size mismatch)
+    /// - `x.ncols()` does not match `d_model` (dimension mismatch)
     pub fn apply_rotation_batch(&self, x: &Array2<f64>, positions: &[usize]) -> Array2<f64> {
+        assert_eq!(
+            x.nrows(),
+            positions.len(),
+            "positions length ({}) must match batch size (x.nrows() = {})",
+            positions.len(),
+            x.nrows()
+        );
+        assert_eq!(
+            x.ncols(),
+            self.d_model,
+            "input width ({}) must equal d_model ({})",
+            x.ncols(),
+            self.d_model
+        );
         let mut result = Array2::zeros((x.nrows(), x.ncols()));
         for (i, &pos) in positions.iter().enumerate() {
             let rotated = self.apply_rotation(&x.row(i).to_owned(), pos);
