@@ -1,0 +1,40 @@
+[package]
+name = "rag_trading"
+version = "0.1.0"
+edition = "2021"
+description = "Retrieval-Augmented Generation (RAG) for Trading"
+license = "MIT"
+authors = ["Machine Learning for Trading"]
+
+[lib]
+name = "rag_trading"
+path = "src/lib.rs"
+
+[[bin]]
+name = "retrieval_demo"
+path = "src/bin/retrieval_demo.rs"
+
+[[bin]]
+name = "signal_demo"
+path = "src/bin/signal_demo.rs"
+
+[[bin]]
+name = "backtest_demo"
+path = "src/bin/backtest_demo.rs"
+
+[[bin]]
+name = "crypto_demo"
+path = "src/bin/crypto_demo.rs"
+
+[dependencies]
+tokio = { version = "1.35", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+reqwest = { version = "0.11", features = ["json"] }
+thiserror = "1.0"
+anyhow = "1.0"
+uuid = { version = "1.6", features = ["v4"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
