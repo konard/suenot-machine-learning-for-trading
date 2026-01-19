@@ -8,6 +8,13 @@ pub enum TradingError {
     #[error("Insufficient data: need at least {required} periods, got {actual}")]
     InsufficientData { required: usize, actual: usize },
 
+    #[error("Invalid parameter '{name}': {value} - {reason}")]
+    InvalidParameter {
+        name: String,
+        value: String,
+        reason: String,
+    },
+
     #[error("Invalid signal: {0}")]
     InvalidSignal(String),
 

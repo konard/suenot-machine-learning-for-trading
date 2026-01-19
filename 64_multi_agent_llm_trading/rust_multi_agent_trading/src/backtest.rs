@@ -235,6 +235,14 @@ impl<'a> MultiAgentBacktester<'a> {
     ) -> Result<BacktestResult> {
         self.reset();
 
+        if step == 0 {
+            return Err(TradingError::InvalidParameter {
+                name: "step".to_string(),
+                value: "0".to_string(),
+                reason: "step must be > 0 to avoid division by zero".to_string(),
+            });
+        }
+
         if data.len() < lookback + 10 {
             return Err(TradingError::InsufficientData {
                 required: lookback + 10,

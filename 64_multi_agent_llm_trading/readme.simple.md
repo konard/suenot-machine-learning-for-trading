@@ -32,7 +32,7 @@ These are AI systems that can:
 - Write responses like a human
 - Have conversations
 
-```
+```text
 You: "Should I buy Apple stock?"
 
 LLM: "Let me think about this... Apple has strong revenue,
@@ -52,13 +52,13 @@ The magic happens when **MULTIPLE LLMs work together**!
 Imagine you're sick and need advice:
 
 **One Doctor:**
-```
+```text
 Doctor: "You have a cold. Take this medicine."
 (What if they missed something?)
 ```
 
 **Multiple Specialists (Medical Team):**
-```
+```text
 General Doctor: "Looks like a cold."
 Heart Specialist: "Let me check your heart... all good."
 Lung Specialist: "Your breathing sounds fine."
@@ -71,13 +71,13 @@ The team is more **reliable** because they check each other!
 ### Same for Trading
 
 **One AI:**
-```
+```text
 AI: "Buy Apple stock!"
 (But did it check everything?)
 ```
 
 **Team of AI Agents:**
-```
+```text
 Fundamentals Agent: "Apple's profits are growing +15%"
 Technical Agent: "Price just bounced off support level"
 Sentiment Agent: "Social media is 70% positive"
@@ -96,7 +96,7 @@ Trader Agent: "Okay, buying a small position!"
 
 Like a meeting where everyone speaks in turn:
 
-```
+```text
 ┌─────────────────────────────────────────────┐
 │             ROUND TABLE MEETING              │
 │                                              │
@@ -121,7 +121,7 @@ Like a meeting where everyone speaks in turn:
 
 Like a school debate competition:
 
-```
+```text
 ┌─────────────────────────────────────────────┐
 │               THE GREAT DEBATE               │
 │                                              │
@@ -153,7 +153,7 @@ Like a school debate competition:
 
 Like a company with a manager:
 
-```
+```text
 ┌─────────────────────────────────────────────┐
 │                COMPANY STRUCTURE             │
 │                                              │
@@ -179,7 +179,7 @@ Like a company with a manager:
 
 Let's see how a Multi-Agent system might analyze Bitcoin:
 
-```
+```text
 ╔═══════════════════════════════════════════════════════════╗
 ║          MULTI-AGENT CRYPTO TRADING SYSTEM                ║
 ║                                                           ║
@@ -238,7 +238,7 @@ Let's see how a Multi-Agent system might analyze Bitcoin:
 
 ### 1. Different Perspectives
 
-```
+```text
 One AI thinking alone:
 "Apple stock looks good" ← Might miss something!
 
@@ -253,7 +253,7 @@ Multiple AI agents:
 
 ### 2. Checks and Balances
 
-```
+```text
 Without debate:
 AI: "Definitely buy!" → Could be wrong
 
@@ -266,7 +266,7 @@ Bull: "Hmm, good point..."
 
 ### 3. Specialization
 
-```
+```text
 One AI trying to do everything:
 "I need to analyze financials, charts, news,
  sentiment, risks, timing... SO MUCH!"
@@ -372,7 +372,7 @@ print(result)  # "Team decision for AAPL: BUY"
 Imagine you're building a team of AI agents to trade stocks.
 
 **Question 1:** What agents would you include?
-```
+```text
 Think about:
 - What information is important for trading?
 - What different perspectives might help?
@@ -380,7 +380,7 @@ Think about:
 ```
 
 **Question 2:** What could go wrong?
-```
+```text
 Think about:
 - What if all agents agree but they're all wrong?
 - What if the news agent reads fake news?
@@ -388,7 +388,7 @@ Think about:
 ```
 
 **Question 3:** How would you improve the team?
-```
+```text
 Think about:
 - Should agents learn from their mistakes?
 - Should you add more specialists?
@@ -400,21 +400,21 @@ Think about:
 ## Real-World Applications
 
 ### 1. Stock Trading
-```
+```text
 AI team analyzes thousands of stocks daily
 Much faster than human analysts
 Can spot patterns humans might miss
 ```
 
 ### 2. Cryptocurrency Trading
-```
+```text
 24/7 market - perfect for AI (they don't sleep!)
 Analyze social media sentiment in real-time
 React to news faster than any human
 ```
 
 ### 3. Portfolio Management
-```
+```text
 Team of agents decides how to split money
 One agent watches tech stocks
 Another watches bonds
@@ -461,7 +461,7 @@ Boss agent keeps everything balanced
 - Work together to make better decisions
 - Can analyze information 24/7 without getting tired
 
-```
+```text
 ┌─────────────────────────────────────────────┐
 │                                             │
 │  "Two heads are better than one.            │

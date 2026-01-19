@@ -351,6 +351,9 @@ class MultiAgentBacktester:
         self.reset()
         context = context or {}
 
+        if step <= 0:
+            raise ValueError("step must be > 0")
+
         if len(data) < lookback + 10:
             raise ValueError(f"Insufficient data: need at least {lookback + 10} periods")
 

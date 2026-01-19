@@ -138,6 +138,8 @@ class Debate:
         bear_agent: BaseAgent,
         num_rounds: int = 3
     ):
+        if num_rounds <= 0:
+            raise ValueError("num_rounds must be > 0")
         self.bull_agent = bull_agent
         self.bear_agent = bear_agent
         self.num_rounds = num_rounds

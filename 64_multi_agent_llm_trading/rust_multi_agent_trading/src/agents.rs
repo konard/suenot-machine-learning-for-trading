@@ -302,7 +302,7 @@ impl Agent for BullAgent {
         // Always find something positive
         reasons.push("Long-term fundamentals remain intact".to_string());
 
-        let signal = if confidence_boost > 0.1 {
+        let signal = if confidence_boost >= 0.1 {
             Signal::StrongBuy
         } else {
             Signal::Buy
@@ -382,7 +382,7 @@ impl Agent for BearAgent {
         // Always find something negative
         reasons.push("Macro environment remains uncertain".to_string());
 
-        let signal = if confidence_boost > 0.1 {
+        let signal = if confidence_boost >= 0.1 {
             Signal::StrongSell
         } else {
             Signal::Sell
