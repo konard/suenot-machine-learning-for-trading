@@ -228,8 +228,11 @@ impl OrderBook {
             Side::Sell => self.match_sell_order(&mut order, &mut result),
         }
 
+        // Capture remaining before potentially moving order
+        let remaining = order.remaining;
+
         // Add remaining quantity to book (for limit orders)
-        if order.remaining > 0 && order.order_type == OrderType::Limit {
+        if remaining > 0 && order.order_type == OrderType::Limit {
             match order.side {
                 Side::Buy => self.bids.push(BidEntry(order)),
                 Side::Sell => self.asks.push(AskEntry(order)),
@@ -245,7 +248,7 @@ impl OrderBook {
             self.last_price = result.fills.last().map(|f| f.price).unwrap_or(self.last_price);
         }
 
-        result.remaining = order.remaining;
+        result.remaining = remaining;
         result
     }
 

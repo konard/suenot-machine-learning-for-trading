@@ -32,13 +32,13 @@ def main():
     fundamental_value = 100.0
     num_steps = 500
     initial_cash = 100000.0
-    initial_shares = 100
 
     # Create simulation engine
     engine = SimulationEngine(
         initial_price=initial_price,
         fundamental_value=fundamental_value,
-        volatility=0.02
+        volatility=0.02,
+        verbose=True
     )
 
     # Add diverse agents
@@ -49,8 +49,6 @@ def main():
         agent = ValueInvestorAgent(
             agent_id=f"value_{i+1}",
             initial_cash=initial_cash,
-            initial_shares=initial_shares,
-            fundamental_value=fundamental_value,
             discount_threshold=0.05 + i * 0.02,  # Different thresholds
             premium_threshold=0.05 + i * 0.02
         )
@@ -62,7 +60,6 @@ def main():
         agent = MomentumTraderAgent(
             agent_id=f"momentum_{i+1}",
             initial_cash=initial_cash,
-            initial_shares=initial_shares,
             short_window=5 + i * 5,  # Different windows
             long_window=20 + i * 10
         )
@@ -71,18 +68,18 @@ def main():
 
     # Market makers (provide liquidity)
     for i in range(2):
+        target_spread = 50 + i * 25  # Different spreads in basis points
         agent = MarketMakerAgent(
             agent_id=f"mm_{i+1}",
             initial_cash=initial_cash * 2,  # More capital for MM
-            initial_shares=initial_shares * 2,
-            base_spread=0.002 + i * 0.001  # Different spreads
+            target_spread_bps=target_spread
         )
         engine.add_agent(agent)
-        print(f"  Added {agent.agent_id}: Market Maker (spread: {agent.base_spread*100:.1f}%)")
+        print(f"  Added {agent.agent_id}: Market Maker (spread: {target_spread}bps)")
 
     # Run simulation
     print(f"\nRunning simulation for {num_steps} steps...")
-    result = engine.run(num_steps=num_steps, verbose=True)
+    result = engine.run(num_steps=num_steps)
 
     # Print results
     print("\n" + "=" * 60)
@@ -110,7 +107,7 @@ def main():
     print(f"  Tracking Error vs Fundamental: {metrics.get('tracking_error', 0):.3f}")
     print(f"  Final Deviation from Fundamental: {metrics.get('final_deviation_pct', 0):.2f}%")
 
-    print(f"\nTotal Trades Executed: {result.total_trades}")
+    print(f"\nTotal Trades Executed: {len(result.trade_log)}")
 
     # Agent performance
     print("\nAgent Performance:")
@@ -118,15 +115,17 @@ def main():
     print(f"{'Agent':<15} {'Type':<12} {'Final Value':>12} {'Return':>10} {'Trades':>8}")
     print("-" * 60)
 
-    for agent_id, agent_result in result.agent_results.items():
-        agent = engine.agents[agent_id]
+    # Create agent dict for easy lookup
+    agents_dict = {agent.agent_id: agent for agent in engine.agents}
+
+    for agent_id, agent_perf in result.agent_performance.items():
+        agent = agents_dict[agent_id]
         agent_type = agent.__class__.__name__.replace("Agent", "")[:11]
-        final_value = agent_result.get("final_value", 0)
-        initial_value = initial_cash + initial_shares * initial_price
-        if "mm_" in agent_id:
-            initial_value = initial_cash * 2 + initial_shares * 2 * initial_price
-        ret = (final_value / initial_value - 1) * 100
-        trades = agent_result.get("num_trades", 0)
+        final_value = agent_perf.get("final_value", 0)
+        # Use agent's initial_cash for return calculation
+        agent_initial = agent.initial_cash
+        ret = (final_value / agent_initial - 1) * 100 if agent_initial > 0 else 0
+        trades = agent_perf.get("num_trades", 0)
         print(f"{agent_id:<15} {agent_type:<12} ${final_value:>10,.0f} {ret:>9.2f}% {trades:>8}")
 
     print("-" * 60)

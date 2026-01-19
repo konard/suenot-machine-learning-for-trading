@@ -5,5 +5,5 @@
 mod bybit;
 mod types;
 
-pub use bybit::BybitClient;
+pub use bybit::{BybitClient, CRYPTO_UNIVERSE};
 pub use types::{Candle, PriceSeries, OHLCV};

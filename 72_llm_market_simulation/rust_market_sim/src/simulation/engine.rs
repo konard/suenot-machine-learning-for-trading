@@ -2,10 +2,8 @@
 //!
 //! Orchestrates multi-agent market simulation.
 
-use crate::agents::{Agent, AgentDecision, Action};
-use crate::agents::base::MarketState;
-use crate::market::{OrderBook, Order, OrderType, Side};
-use rand::Rng;
+use crate::agents::{Agent, AgentDecision, Action, MarketState};
+use crate::market::{OrderBook, Order, Side};
 use rand_distr::{Distribution, Normal};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -183,9 +181,10 @@ impl SimulationEngine {
         // Each agent makes a decision
         let agent_ids: Vec<String> = self.agent_order.clone();
         for agent_id in agent_ids {
-            let agent = self.agents.get_mut(&agent_id).unwrap();
-            let decision = agent.make_decision(&state);
-            drop(agent); // Release borrow
+            let decision = {
+                let agent = self.agents.get_mut(&agent_id).unwrap();
+                agent.make_decision(&state)
+            };
 
             self.process_decision(&agent_id, &decision);
         }

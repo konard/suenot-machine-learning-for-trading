@@ -10,7 +10,7 @@ mod value;
 mod momentum;
 mod market_maker;
 
-pub use base::{Agent, AgentDecision, Action};
+pub use base::{Agent, AgentDecision, Action, MarketState};
 pub use value::ValueInvestor;
 pub use momentum::MomentumTrader;
 pub use market_maker::MarketMaker;

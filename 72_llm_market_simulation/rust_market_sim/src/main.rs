@@ -309,7 +309,7 @@ fn main() -> Result<()> {
 
     for (id, agent_result) in sorted_results {
         println!(
-            "{:<15} {:<15} ${:>10,.0f} {:>9.2}% {:>8}",
+            "{:<15} {:<15} ${:>10.0} {:>9.2}% {:>8}",
             id,
             agent_result.agent_type,
             agent_result.final_value,
