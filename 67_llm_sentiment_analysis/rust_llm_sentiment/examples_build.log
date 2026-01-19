@@ -1,0 +1,49 @@
+warning: struct `FinancialTextCleaner` is never constructed
+   --> src/data/preprocessing.rs:136:12
+    |
+136 | pub struct FinancialTextCleaner {
+    |            ^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: associated items `new`, `clean`, and `extract_entities` are never used
+   --> src/data/preprocessing.rs:151:12
+    |
+149 | impl FinancialTextCleaner {
+    | ------------------------- associated items in this implementation
+150 |     /// Create a new financial text cleaner
+151 |     pub fn new() -> Self {
+    |            ^^^
+...
+174 |     pub fn clean(&self, text: &str) -> String {
+    |            ^^^^^
+...
+187 |     pub fn extract_entities(&self, text: &str) -> FinancialEntities {
+    |            ^^^^^^^^^^^^^^^^
+
+warning: struct `FinancialEntities` is never constructed
+   --> src/data/preprocessing.rs:212:12
+    |
+212 | pub struct FinancialEntities {
+    |            ^^^^^^^^^^^^^^^^^
+
+warning: struct `SourceAggregation` is never constructed
+   --> src/sentiment/aggregator.rs:214:12
+    |
+214 | pub struct SourceAggregation {
+    |            ^^^^^^^^^^^^^^^^^
+
+warning: associated items `from_aggregated` and `sources_agree` are never used
+   --> src/sentiment/aggregator.rs:229:12
+    |
+227 | impl SourceAggregation {
+    | ---------------------- associated items in this implementation
+228 |     /// Create from aggregated sentiment
+229 |     pub fn from_aggregated(agg: &AggregatedSentiment) -> Self {
+    |            ^^^^^^^^^^^^^^^
+...
+252 |     pub fn sources_agree(&self) -> bool {
+    |            ^^^^^^^^^^^^^
+
+warning: `llm_sentiment` (lib) generated 5 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s

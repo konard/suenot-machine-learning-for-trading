@@ -1,0 +1,153 @@
+   Compiling llm_sentiment v0.1.0 (/tmp/gh-issue-solver-1768841352079/67_llm_sentiment_analysis/rust_llm_sentiment)
+warning: struct `FinancialTextCleaner` is never constructed
+   --> src/data/preprocessing.rs:136:12
+    |
+136 | pub struct FinancialTextCleaner {
+    |            ^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: associated items `new`, `clean`, and `extract_entities` are never used
+   --> src/data/preprocessing.rs:151:12
+    |
+149 | impl FinancialTextCleaner {
+    | ------------------------- associated items in this implementation
+150 |     /// Create a new financial text cleaner
+151 |     pub fn new() -> Self {
+    |            ^^^
+...
+174 |     pub fn clean(&self, text: &str) -> String {
+    |            ^^^^^
+...
+187 |     pub fn extract_entities(&self, text: &str) -> FinancialEntities {
+    |            ^^^^^^^^^^^^^^^^
+
+warning: struct `FinancialEntities` is never constructed
+   --> src/data/preprocessing.rs:212:12
+    |
+212 | pub struct FinancialEntities {
+    |            ^^^^^^^^^^^^^^^^^
+
+warning: struct `SourceAggregation` is never constructed
+   --> src/sentiment/aggregator.rs:214:12
+    |
+214 | pub struct SourceAggregation {
+    |            ^^^^^^^^^^^^^^^^^
+
+warning: associated items `from_aggregated` and `sources_agree` are never used
+   --> src/sentiment/aggregator.rs:229:12
+    |
+227 | impl SourceAggregation {
+    | ---------------------- associated items in this implementation
+228 |     /// Create from aggregated sentiment
+229 |     pub fn from_aggregated(agg: &AggregatedSentiment) -> Self {
+    |            ^^^^^^^^^^^^^^^
+...
+252 |     pub fn sources_agree(&self) -> bool {
+    |            ^^^^^^^^^^^^^
+
+warning: field `amounts` is never read
+   --> src/data/preprocessing.rs:218:9
+    |
+212 | pub struct FinancialEntities {
+    |            ----------------- field in this struct
+...
+218 |     pub amounts: Vec<String>,
+    |         ^^^^^^^
+    |
+    = note: `FinancialEntities` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `llm_sentiment` (lib) generated 5 warnings
+warning: `llm_sentiment` (lib test) generated 3 warnings (2 duplicates)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.33s
+     Running unittests src/lib.rs (target/debug/deps/llm_sentiment-b437feac7660ba03)
+
+running 49 tests
+test api::bybit::tests::test_interval_as_str ... ok
+test data::news::tests::test_full_text ... ok
+test data::news::tests::test_mock_news_collection ... ok
+test api::bybit::tests::test_interval_duration ... ok
+test data::news::tests::test_news_article_creation ... ok
+test data::news::tests::test_news_source_weight ... ok
+test data::preprocessing::tests::test_extract_tickers ... ok
+test sentiment::aggregator::tests::test_aggregate_with_sources ... ok
+test sentiment::aggregator::tests::test_confidence_weighted ... ok
+test data::preprocessing::tests::test_financial_cleaner ... ok
+test sentiment::aggregator::tests::test_majority_sentiment ... ok
+test sentiment::aggregator::tests::test_simple_average ... ok
+test data::preprocessing::tests::test_extract_hashtags ... ok
+test data::preprocessing::tests::test_remove_urls ... ok
+test data::preprocessing::tests::test_preprocess_basic ... ok
+test sentiment::aggregator::tests::test_time_decay ... ok
+test data::preprocessing::tests::test_extract_entities ... ok
+test sentiment::analyzer::tests::test_analyze_positive ... ok
+test sentiment::analyzer::tests::test_sentiment_levels ... ok
+test sentiment::crypto::tests::test_bearish_terms ... ok
+test sentiment::analyzer::tests::test_analyze_negative ... ok
+test sentiment::crypto::tests::test_fear_greed_levels ... ok
+test sentiment::crypto::tests::test_bullish_terms ... ok
+test sentiment::crypto::tests::test_mixed_sentiment ... ok
+test sentiment::crypto::tests::test_neutral_terms ... ok
+test sentiment::analyzer::tests::test_analyze_neutral ... ok
+test sentiment::crypto::tests::test_sentiment_to_fg ... ok
+test sentiment::lexicon::tests::test_analyze_negative ... ok
+test sentiment::lexicon::tests::test_analyze_positive ... ok
+test sentiment::lexicon::tests::test_intensifier_handling ... ok
+test sentiment::analyzer::tests::test_confidence ... ok
+test sentiment::lexicon::tests::test_negation ... ok
+test sentiment::lexicon::tests::test_negation_handling ... ok
+test sentiment::lexicon::tests::test_negative_words ... ok
+test sentiment::lexicon::tests::test_positive_words ... ok
+test sentiment::analyzer::tests::test_batch_analysis ... ok
+test strategy::backtest::tests::test_losing_trade ... ok
+test strategy::backtest::tests::test_empty_backtest ... ok
+test strategy::backtest::tests::test_equity_curve ... ok
+test strategy::backtest::tests::test_profitable_trade ... ok
+test strategy::signals::tests::test_bullish_signal ... ok
+test strategy::signals::tests::test_aggregated_signal ... ok
+test strategy::signals::tests::test_hold_signal_low_confidence ... ok
+test strategy::signals::tests::test_hold_signal_neutral ... ok
+test strategy::signals::tests::test_bearish_signal ... ok
+test strategy::signals::tests::test_position_sizing ... ok
+test strategy::signals::tests::test_position_sizing_volatility ... ok
+test strategy::signals::tests::test_strong_buy_signal ... ok
+test sentiment::analyzer::tests::test_context_adjustment ... ok
+
+test result: ok. 49 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+   Doc-tests llm_sentiment
+
+running 1 test
+test src/lib.rs - (line 15) - compile ... FAILED
+
+failures:
+
+---- src/lib.rs - (line 15) stdout ----
+error[E0308]: mismatched types
+   --> src/lib.rs:35:38
+    |
+ 22 |     let signal = signal_gen.generate(&[sentiment]);
+    |                             -------- ^^^^^^^^^^^^ expected `&SentimentResult`, found `&[SentimentResult; 1]`
+    |                             |
+    |                             arguments to this method are incorrect
+    |
+    = note: expected reference `&SentimentResult`
+               found reference `&[SentimentResult; 1]`
+note: method defined here
+   --> /tmp/gh-issue-solver-1768841352079/67_llm_sentiment_analysis/rust_llm_sentiment/src/strategy/signals.rs:191:12
+    |
+191 |     pub fn generate(&self, result: &SentimentResult) -> GeneratedSignal {
+    |            ^^^^^^^^
+
+error: aborting due to 1 previous error
+
+For more information about this error, try `rustc --explain E0308`.
+Couldn't compile the test.
+
+failures:
+    src/lib.rs - (line 15)
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+error: doctest failed, to rerun pass `--doc`
