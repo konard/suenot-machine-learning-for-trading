@@ -3,7 +3,7 @@
 This chapter explores the **Deep Convolutional Transformer (DCT)**, a hybrid architecture that combines Convolutional Neural Networks (CNN) with Transformer-based multi-head attention to extract both local patterns and global dependencies from financial time series data.
 
 <p align="center">
-<img src="https://i.imgur.com/zKqMvBN.png" width="70%">
+<img src="https://i.imgur.com/zKqMvBN.png" alt="Deep Convolutional Transformer architecture diagram" width="70%">
 </p>
 
 ## Contents
@@ -44,7 +44,7 @@ DCT combines the strengths of both architectures.
 
 ### Why Combine CNN and Transformer?
 
-```
+```text
 Financial Time Series Challenge:
 ├── Local Patterns (CNN strength)
 │   ├── Candlestick patterns (2-5 bars)
@@ -94,7 +94,7 @@ Financial Time Series Challenge:
 
 ## DCT Architecture
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                    DEEP CONVOLUTIONAL TRANSFORMER                         │
 ├──────────────────────────────────────────────────────────────────────────┤
@@ -838,7 +838,7 @@ def calculate_win_rate(trades, prices):
 
 See [rust_dct](rust_dct/) for complete Rust implementation using Bybit data.
 
-```
+```text
 rust_dct/
 ├── Cargo.toml
 ├── README.md
@@ -885,7 +885,7 @@ cargo run --example demo
 
 See [python/](python/) for Python implementation.
 
-```
+```text
 python/
 ├── model.py                # Main DCT model implementation
 ├── data.py                 # Data loading (yfinance, Bybit) and feature engineering
@@ -977,7 +977,7 @@ python python/example_usage.py --mode both
 
 ## Difficulty Level
 
-**Intermediate to Advanced**
+### Intermediate to Advanced
 
 Prerequisites:
 - Understanding of CNN architectures

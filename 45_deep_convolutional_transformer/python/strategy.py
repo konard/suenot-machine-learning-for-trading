@@ -149,7 +149,6 @@ class Backtester:
         for i in range(len(signals)):
             current_price = prices.iloc[i]
             signal = signals['signal'].iloc[i]
-            confidence = signals['confidence'].iloc[i]
 
             # Check for exit conditions if in position
             if position != 0:
@@ -159,7 +158,8 @@ class Backtester:
                 if self.config.stop_loss and returns < -self.config.stop_loss:
                     # Exit position - use entry_capital for consistent PnL
                     pnl = returns * position_size * entry_capital
-                    cost = abs(position_size) * current_price * self.config.transaction_cost
+                    # Transaction cost on notional value (position_size * entry_capital)
+                    cost = position_size * entry_capital * self.config.transaction_cost
                     capital += pnl - cost
 
                     trades.append(Trade(
@@ -178,7 +178,8 @@ class Backtester:
                 # Take profit
                 elif self.config.take_profit and returns > self.config.take_profit:
                     pnl = returns * position_size * entry_capital
-                    cost = abs(position_size) * current_price * self.config.transaction_cost
+                    # Transaction cost on notional value
+                    cost = position_size * entry_capital * self.config.transaction_cost
                     capital += pnl - cost
 
                     trades.append(Trade(
@@ -203,15 +204,16 @@ class Backtester:
                 entry_idx = i
                 entry_capital = capital  # Track capital at entry
 
-                # Entry cost
-                cost = position_size * current_price * self.config.transaction_cost
+                # Entry cost on notional value (position_size * entry_capital)
+                cost = position_size * entry_capital * self.config.transaction_cost
                 capital -= cost
 
             elif position != 0 and signal != position and signal != 0:
                 # Signal reversal - exit current and enter new
                 returns = (current_price - entry_price) / entry_price * position
                 pnl = returns * position_size * entry_capital
-                cost = abs(position_size) * current_price * self.config.transaction_cost
+                # Transaction cost on notional value
+                cost = position_size * entry_capital * self.config.transaction_cost
                 capital += pnl - cost
 
                 trades.append(Trade(
@@ -231,7 +233,8 @@ class Backtester:
                 entry_price = current_price
                 entry_idx = i
                 entry_capital = capital  # Track capital for new position
-                cost = position_size * current_price * self.config.transaction_cost
+                # Entry cost on notional value
+                cost = position_size * entry_capital * self.config.transaction_cost
                 capital -= cost
 
             # Calculate current equity
@@ -252,7 +255,8 @@ class Backtester:
             current_price = prices.iloc[-1]
             returns = (current_price - entry_price) / entry_price * position
             pnl = returns * position_size * entry_capital
-            cost = abs(position_size) * current_price * self.config.transaction_cost
+            # Transaction cost on notional value
+            cost = position_size * entry_capital * self.config.transaction_cost
             capital += pnl - cost
 
             trades.append(Trade(

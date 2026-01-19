@@ -253,7 +253,8 @@ def example_stock_trading():
     print("\n1. Loading stock data from Yahoo Finance...")
     try:
         df = load_stock_data("AAPL", start_date="2020-01-01")
-    except Exception as e:
+    except (ConnectionError, TimeoutError, ValueError) as e:
+        # Handle expected network/data errors specifically
         print(f"Failed to load Yahoo Finance data: {e}")
         print("Using synthetic data for demonstration.")
         # Create synthetic data
