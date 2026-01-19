@@ -3,8 +3,7 @@
 //! This module provides various positional encoding algorithms
 //! for transformer models processing time series data.
 
-use ndarray::{Array1, Array2, ArrayView1, Axis};
-use std::f64::consts::PI;
+use ndarray::{Array1, Array2, ArrayView1};
 
 /// Trait for positional encoding implementations
 pub trait PositionalEncoding {
@@ -232,18 +231,19 @@ impl PositionalEncoding for LearnedEncoding {
 pub struct RelativeEncoding {
     d_model: usize,
     max_distance: usize,
-    /// Encoding for positive distances (i - j > 0)
+    /// Encoding for positive distances (to > from)
     positive_encodings: Array2<f64>,
-    /// Encoding for negative distances (i - j < 0)
+    /// Encoding for negative distances (to < from)
     negative_encodings: Array2<f64>,
 }
 
 impl RelativeEncoding {
     /// Create a new relative encoding
     pub fn new(d_model: usize, max_distance: usize) -> Self {
-        let sinusoidal = SinusoidalEncoding::new(d_model, max_distance + 1);
-        let positive_encodings = sinusoidal.encode(&(0..=max_distance).collect::<Vec<_>>());
-        let negative_encodings = sinusoidal.encode(&(0..=max_distance).collect::<Vec<_>>());
+        // Compute separate encodings for positive and negative distances
+        // to preserve directionality information
+        let positive_encodings = Self::compute_directional_encoding(d_model, max_distance, 1.0);
+        let negative_encodings = Self::compute_directional_encoding(d_model, max_distance, -1.0);
 
         Self {
             d_model,
@@ -251,6 +251,25 @@ impl RelativeEncoding {
             positive_encodings,
             negative_encodings,
         }
+    }
+
+    /// Compute directional encoding with a sign multiplier
+    /// This ensures positive and negative distances have distinct encodings
+    fn compute_directional_encoding(d_model: usize, max_distance: usize, sign: f64) -> Array2<f64> {
+        let mut encoding = Array2::zeros((max_distance + 1, d_model));
+        let base = 10000.0_f64;
+
+        for dist in 0..=max_distance {
+            // Apply sign to the position to create directional encoding
+            let signed_dist = sign * (dist as f64);
+            for i in 0..(d_model / 2) {
+                let angle = signed_dist / base.powf((2.0 * i as f64) / d_model as f64);
+                encoding[[dist, 2 * i]] = angle.sin();
+                encoding[[dist, 2 * i + 1]] = angle.cos();
+            }
+        }
+
+        encoding
     }
 
     /// Get relative position encoding between two positions
@@ -355,14 +374,23 @@ impl RotaryEncoding {
     /// Apply rotary encoding to a vector
     ///
     /// Rotates the input vector based on position, where pairs of
-    /// dimensions are rotated together.
+    /// dimensions are rotated together. For positions beyond the cache,
+    /// values are computed on-the-fly.
     pub fn apply_rotation(&self, x: &Array1<f64>, position: usize) -> Array1<f64> {
         let half_d = self.d_model / 2;
         let mut result = Array1::zeros(self.d_model);
 
+        // Check if position is within cache bounds
+        let use_cache = position < self.sin_cache.nrows();
+
         for i in 0..half_d {
-            let sin_val = self.sin_cache[[position, i]];
-            let cos_val = self.cos_cache[[position, i]];
+            let (sin_val, cos_val) = if use_cache {
+                (self.sin_cache[[position, i]], self.cos_cache[[position, i]])
+            } else {
+                // Compute on-the-fly for out-of-range positions
+                let theta = (position as f64) / self.base.powf((2.0 * i as f64) / self.d_model as f64);
+                (theta.sin(), theta.cos())
+            };
 
             // Rotate pairs: [x0, x1] -> [x0*cos - x1*sin, x0*sin + x1*cos]
             result[2 * i] = x[2 * i] * cos_val - x[2 * i + 1] * sin_val;
@@ -382,14 +410,61 @@ impl RotaryEncoding {
         result
     }
 
+    /// Get the maximum cached position
+    pub fn max_len(&self) -> usize {
+        self.sin_cache.nrows()
+    }
+
     /// Get sin cache for a position
-    pub fn get_sin(&self, position: usize) -> ArrayView1<f64> {
-        self.sin_cache.row(position)
+    ///
+    /// Returns None if position is out of range
+    pub fn get_sin(&self, position: usize) -> Option<ArrayView1<'_, f64>> {
+        if position < self.sin_cache.nrows() {
+            Some(self.sin_cache.row(position))
+        } else {
+            None
+        }
     }
 
     /// Get cos cache for a position
-    pub fn get_cos(&self, position: usize) -> ArrayView1<f64> {
-        self.cos_cache.row(position)
+    ///
+    /// Returns None if position is out of range
+    pub fn get_cos(&self, position: usize) -> Option<ArrayView1<'_, f64>> {
+        if position < self.cos_cache.nrows() {
+            Some(self.cos_cache.row(position))
+        } else {
+            None
+        }
+    }
+
+    /// Get sin value for a position, computing on-the-fly if out of cache range
+    pub fn get_sin_or_compute(&self, position: usize) -> Array1<f64> {
+        if position < self.sin_cache.nrows() {
+            self.sin_cache.row(position).to_owned()
+        } else {
+            let half_d = self.d_model / 2;
+            let mut result = Array1::zeros(half_d);
+            for i in 0..half_d {
+                let theta = (position as f64) / self.base.powf((2.0 * i as f64) / self.d_model as f64);
+                result[i] = theta.sin();
+            }
+            result
+        }
+    }
+
+    /// Get cos value for a position, computing on-the-fly if out of cache range
+    pub fn get_cos_or_compute(&self, position: usize) -> Array1<f64> {
+        if position < self.cos_cache.nrows() {
+            self.cos_cache.row(position).to_owned()
+        } else {
+            let half_d = self.d_model / 2;
+            let mut result = Array1::zeros(half_d);
+            for i in 0..half_d {
+                let theta = (position as f64) / self.base.powf((2.0 * i as f64) / self.d_model as f64);
+                result[i] = theta.cos();
+            }
+            result
+        }
     }
 }
 

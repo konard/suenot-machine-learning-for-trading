@@ -296,7 +296,17 @@ class TimeSeriesTransformer(nn.Module):
 
         # Market session encoding
         if self.session_encoding is not None and timestamps is not None:
-            session_emb = self.session_encoding(timestamps['hour'])
+            if self.config.market_type == "crypto":
+                session_emb = self.session_encoding(timestamps['hour'])
+            else:
+                # Stock market requires session and time_in_session
+                if 'session' not in timestamps or 'time_in_session' not in timestamps:
+                    raise ValueError("Stock market session encoding requires 'session' and 'time_in_session' in timestamps")
+                session_emb = self.session_encoding(
+                    timestamps['hour'],
+                    timestamps['session'],
+                    timestamps['time_in_session']
+                )
             x = self.session_proj(torch.cat([x, session_emb], dim=-1))
 
         # Transformer layers
@@ -322,12 +332,13 @@ class TimeSeriesTransformer(nn.Module):
             return {'predictions': predictions}
 
         elif self.config.output_type == OutputType.DIRECTION:
-            # Reshape to [batch, horizon, 3] and apply softmax
-            probs = predictions.view(batch, self.config.horizon, 3)
-            probs = F.softmax(probs, dim=-1)
+            # Reshape to [batch, horizon, 3]
+            logits = predictions.view(batch, self.config.horizon, 3)
+            probs = F.softmax(logits, dim=-1)
             return {
-                'predictions': probs.argmax(dim=-1) - 1,  # -1, 0, 1
-                'probabilities': probs
+                'predictions': logits.argmax(dim=-1) - 1,  # -1, 0, 1
+                'probabilities': probs,
+                'logits': logits  # Return logits for loss computation
             }
 
         elif self.config.output_type == OutputType.QUANTILE:
@@ -364,7 +375,7 @@ class TimeSeriesTransformer(nn.Module):
             if targets.dim() > 1:
                 direction = direction[:, 0]  # Use first horizon step
             return F.cross_entropy(
-                predictions['probabilities'][:, 0, :],  # First horizon step
+                predictions['logits'][:, 0, :],  # First horizon step (use logits, not probabilities)
                 direction
             )
 
@@ -379,9 +390,15 @@ class TimeSeriesTransformer(nn.Module):
         targets: torch.Tensor
     ) -> torch.Tensor:
         """Compute quantile loss (pinball loss)."""
+        # Ensure targets have shape [batch, horizon] for broadcasting
+        if targets.dim() == 1:
+            targets = targets.unsqueeze(-1)  # [batch] -> [batch, 1]
+
         losses = []
         for i, q in enumerate(self.config.quantiles):
-            error = targets.unsqueeze(-1) - quantiles[:, :, i:i+1]
+            # quantiles: [batch, horizon, n_quantiles]
+            # targets: [batch, horizon]
+            error = targets - quantiles[:, :, i]  # [batch, horizon]
             loss = torch.max(q * error, (q - 1) * error)
             losses.append(loss.mean())
         return torch.stack(losses).mean()

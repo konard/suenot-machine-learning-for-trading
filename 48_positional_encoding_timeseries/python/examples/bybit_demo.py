@@ -12,8 +12,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import numpy as np
 import torch
+import requests
 
-from data import BybitDataLoader, prepare_features, create_sequences
+from data import BybitDataLoader, KlineData, prepare_features, create_sequences
 from positional_encoding import (
     SinusoidalPositionalEncoding,
     CalendarEncoding,
@@ -37,12 +38,21 @@ def main():
     limit = 500
 
     try:
-        df = loader.fetch_klines(symbol, interval, limit)
+        kline_data = loader.load_klines(symbol, interval, limit)
+        import pandas as pd
+        df = pd.DataFrame({
+            'timestamp': kline_data.timestamp,
+            'open': kline_data.open,
+            'high': kline_data.high,
+            'low': kline_data.low,
+            'close': kline_data.close,
+            'volume': kline_data.volume
+        })
         print(f"Loaded {len(df)} candles for {symbol}")
         print(f"Date range: {df['timestamp'].min()} to {df['timestamp'].max()}")
         print(f"Price range: ${df['close'].min():.2f} - ${df['close'].max():.2f}")
         use_real_data = True
-    except Exception as e:
+    except (requests.RequestException, ValueError) as e:
         print(f"Could not fetch real data: {e}")
         print("Using synthetic data instead...")
 
@@ -72,19 +82,22 @@ def main():
     print("\n2. Feature Preparation")
     print("-" * 40)
 
-    features = prepare_features(
-        df['open'].values,
-        df['high'].values,
-        df['low'].values,
-        df['close'].values,
-        df['volume'].values
+    # Create KlineData object for prepare_features
+    kline_for_features = KlineData(
+        timestamp=df['timestamp'].values,
+        open=df['open'].values,
+        high=df['high'].values,
+        low=df['low'].values,
+        close=df['close'].values,
+        volume=df['volume'].values,
+        symbol=symbol,
+        interval=interval
     )
+    features_df = prepare_features(kline_for_features)
     timestamps = df['timestamp'].values
-    returns = np.diff(df['close'].values) / df['close'].values[:-1]
-    returns = np.insert(returns, 0, 0)  # Pad first return as 0
 
-    print(f"Feature matrix shape: {features.shape}")
-    print(f"Features: return, log_volume, range, body_ratio, direction, return_pct")
+    print(f"Feature DataFrame shape: {features_df.shape}")
+    print(f"Features: {list(features_df.columns)[:8]}...")
 
     # 3. Apply Positional Encodings
     print("\n3. Applying Positional Encodings")
@@ -92,32 +105,49 @@ def main():
 
     d_model = 32
     n_samples = len(df)
+    n_features = len(features_df)  # features_df may have fewer rows due to NaN removal
 
-    # Position encoding
-    pos_enc = SinusoidalPositionalEncoding(d_model, n_samples)
-    x = torch.zeros(1, n_samples, d_model)
-    pos_features = pos_enc(x).squeeze(0).numpy()
+    # Position encoding (use features_df length for consistency)
+    pos_enc = SinusoidalPositionalEncoding(d_model, n_features)
+    x = torch.zeros(1, n_features, d_model)
+    pos_features = pos_enc(x).squeeze(0).detach().numpy()
     print(f"Position encoding: {pos_features.shape}")
 
-    # Calendar encoding
+    # Calendar encoding - requires discrete features
     cal_enc = CalendarEncoding(d_model)
-    ts_tensor = torch.tensor(timestamps).unsqueeze(0)
-    cal_features = cal_enc(ts_tensor).squeeze(0).numpy()
+    # Extract discrete calendar features from the features_df
+    dayofweek = torch.tensor(features_df['dayofweek'].values).unsqueeze(0)
+    month = torch.tensor(features_df['month'].values - 1).unsqueeze(0)  # 0-indexed
+    quarter = torch.tensor(features_df['quarter'].values).unsqueeze(0)
+    hour = torch.tensor(features_df['hour'].values).unsqueeze(0)
+    session_idx = torch.zeros_like(hour)  # placeholder for session
+    cal_features = cal_enc(dayofweek, month, quarter, hour, session_idx).squeeze(0).detach().numpy()
     print(f"Calendar encoding: {cal_features.shape}")
 
-    # Market session encoding (crypto)
+    # Market session encoding (crypto) - requires hour tensor
     session_enc = MarketSessionEncoding(d_model, market_type='crypto')
-    session_features = session_enc(ts_tensor).squeeze(0).numpy()
+    session_features = session_enc(hour).squeeze(0).detach().numpy()
     print(f"Session encoding: {session_features.shape}")
 
-    # Multi-scale temporal encoding
-    multi_enc = MultiScaleTemporalEncoding(d_model, market_type='crypto')
-    multi_features = multi_enc(ts_tensor).squeeze(0).numpy()
+    # Multi-scale temporal encoding - requires dict of scale tensors
+    multi_enc = MultiScaleTemporalEncoding(d_model)
+    ts_dict = {
+        'minute': torch.zeros_like(hour),
+        'hour': hour,
+        'day': torch.tensor(features_df['day'].values - 1).unsqueeze(0),
+        'week': dayofweek,
+        'month': month,
+    }
+    multi_features = multi_enc(ts_dict).squeeze(0).detach().numpy()
     print(f"Multi-scale encoding: {multi_features.shape}")
+
+    # Get numeric features for combining
+    feature_cols = ['log_return', 'volatility', 'volume_change', 'momentum', 'rsi', 'range', 'vwap_deviation']
+    features_numeric = features_df[feature_cols].values
 
     # Combine all features
     all_features = np.concatenate([
-        features,
+        features_numeric,
         pos_features,
         cal_features,
         session_features
@@ -131,17 +161,21 @@ def main():
     seq_length = 24  # 24-hour lookback
     target_length = 1  # 1-hour prediction
 
-    sequences, targets, seq_timestamps = create_sequences(
-        features, returns, timestamps, seq_length, target_length
+    X, y, seq_timestamps = create_sequences(
+        features_df, feature_cols, target_col='log_return',
+        seq_len=seq_length, horizon=target_length
     )
 
-    print(f"Number of sequences: {len(sequences)}")
-    print(f"Sequence shape: {sequences[0].shape}")
-    print(f"Target shape: {targets[0].shape}")
+    print(f"Number of sequences: {len(X)}")
+    print(f"Sequence shape: {X.shape}")
+    print(f"Target shape: {y.shape}")
 
     # 5. Trading Strategy Backtest
     print("\n5. Trading Strategy Backtest")
     print("-" * 40)
+
+    # Get returns from feature DataFrame
+    returns = features_df['log_return'].values
 
     # Simple momentum strategy (in practice, use trained model predictions)
     window = 24
@@ -172,22 +206,20 @@ def main():
     print("\n6. Time Pattern Analysis")
     print("-" * 40)
 
-    # Analyze returns by session
+    # Analyze returns by session using features_df hour column
     from datetime import datetime
+
+    # Use the hour column from features_df
+    hours_arr = features_df['hour'].values
 
     asia_returns = []
     europe_returns = []
     americas_returns = []
 
-    for i, ts in enumerate(timestamps):
-        if i == 0:
-            continue
-        dt = datetime.utcfromtimestamp(ts)
-        hour = dt.hour
-
-        if hour < 8:
+    for i, h in enumerate(hours_arr):
+        if h < 8:
             asia_returns.append(returns[i])
-        elif hour < 16:
+        elif h < 16:
             europe_returns.append(returns[i])
         else:
             americas_returns.append(returns[i])
@@ -197,13 +229,11 @@ def main():
     print(f"  Europe (08-16 UTC):   {np.mean(europe_returns)*100:.4f}%")
     print(f"  Americas (16-24 UTC): {np.mean(americas_returns)*100:.4f}%")
 
-    # Analyze returns by day of week
+    # Analyze returns by day of week using features_df dayofweek column
     weekday_returns = {i: [] for i in range(7)}
-    for i, ts in enumerate(timestamps):
-        if i == 0:
-            continue
-        dt = datetime.utcfromtimestamp(ts)
-        weekday_returns[dt.weekday()].append(returns[i])
+    days_arr = features_df['dayofweek'].values
+    for i, dow in enumerate(days_arr):
+        weekday_returns[dow].append(returns[i])
 
     day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
     print("\nMean returns by day of week:")
@@ -221,7 +251,7 @@ def main():
     print(f"Interval: {interval} minutes")
     print(f"Samples: {n_samples}")
     print(f"Feature dimensions: {all_features.shape[1]}")
-    print(f"  - Base features: {features.shape[1]}")
+    print(f"  - Base features: {features_numeric.shape[1]}")
     print(f"  - Position encoding: {pos_features.shape[1]}")
     print(f"  - Calendar encoding: {cal_features.shape[1]}")
     print(f"  - Session encoding: {session_features.shape[1]}")

@@ -3,7 +3,7 @@
 //! This module provides temporal encodings specific to financial markets,
 //! including calendar features and trading session information.
 
-use chrono::{DateTime, Datelike, NaiveDateTime, Timelike, Utc, Weekday};
+use chrono::{DateTime, Datelike, Timelike, Utc, Weekday};
 use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
 
@@ -235,10 +235,23 @@ impl MarketSessionEncoding {
     fn encode_stock_session(&self, dt: &DateTime<Utc>) -> Array1<f64> {
         let mut features = Array1::zeros(self.d_model);
 
-        // Convert to EST (UTC-5)
-        let hour_est = (dt.hour() as i32 - 5).rem_euclid(24) as u32;
+        // Check if weekend first - market is closed on weekends
+        let is_weekend = dt.weekday() == Weekday::Sat || dt.weekday() == Weekday::Sun;
+        features[7] = if is_weekend { 1.0 } else { 0.0 };
+
+        if is_weekend {
+            // Market is closed on weekends - set closed flag and return
+            features[3] = 1.0; // is_closed
+            return features;
+        }
+
+        // Convert to Eastern Time (handle DST)
+        // DST in US: Second Sunday of March to First Sunday of November
+        // EST = UTC-5, EDT = UTC-4
+        let utc_offset = if Self::is_dst(dt) { 4 } else { 5 };
+        let hour_eastern = (dt.hour() as i32 - utc_offset).rem_euclid(24) as u32;
         let minute = dt.minute();
-        let time_decimal = hour_est as f64 + minute as f64 / 60.0;
+        let time_decimal = hour_eastern as f64 + minute as f64 / 60.0;
 
         // Session flags
         let is_premarket = time_decimal >= 4.0 && time_decimal < 9.5;
@@ -264,14 +277,49 @@ impl MarketSessionEncoding {
             features[6] = (-dist_to_close).exp();
         }
 
-        // Weekend flag
-        features[7] = if dt.weekday() == Weekday::Sat || dt.weekday() == Weekday::Sun {
-            1.0
-        } else {
-            0.0
-        };
-
         features
+    }
+
+    /// Check if a date falls within US Daylight Saving Time
+    /// DST runs from second Sunday of March to first Sunday of November
+    fn is_dst(dt: &DateTime<Utc>) -> bool {
+        let month = dt.month();
+        let day = dt.day();
+
+        match month {
+            // January, February: No DST
+            1 | 2 => false,
+            // March: DST starts on second Sunday
+            3 => {
+                // Find second Sunday: first Sunday is at day (1 + (7 - weekday_of_day1) % 7)
+                // Second Sunday is that + 7
+                let first_of_month = DateTime::from_timestamp(
+                    dt.timestamp() - ((day - 1) as i64 * 86400),
+                    0,
+                )
+                .unwrap_or(*dt);
+                let first_dow = first_of_month.weekday().num_days_from_sunday();
+                let first_sunday = 1 + (7 - first_dow) % 7;
+                let second_sunday = first_sunday + 7;
+                day > second_sunday || (day == second_sunday && dt.hour() >= 2)
+            }
+            // April - October: DST active
+            4..=10 => true,
+            // November: DST ends on first Sunday
+            11 => {
+                let first_of_month = DateTime::from_timestamp(
+                    dt.timestamp() - ((day - 1) as i64 * 86400),
+                    0,
+                )
+                .unwrap_or(*dt);
+                let first_dow = first_of_month.weekday().num_days_from_sunday();
+                let first_sunday = 1 + (7 - first_dow) % 7;
+                day < first_sunday || (day == first_sunday && dt.hour() < 2)
+            }
+            // December: No DST
+            12 => false,
+            _ => false,
+        }
     }
 
     fn encode_crypto_session(&self, dt: &DateTime<Utc>) -> Array1<f64> {
