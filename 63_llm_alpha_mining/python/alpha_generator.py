@@ -155,6 +155,28 @@ class AlphaExpressionParser:
 
         Returns:
             Series of alpha factor values
+
+        Security Note:
+            This method uses Python's eval() with restricted builtins and a whitelist
+            of safe functions. While the validate() method filters dangerous patterns,
+            eval() is inherently risky for untrusted input due to Python's introspection
+            capabilities.
+
+            For TRUSTED inputs (e.g., researcher-defined expressions), the current
+            implementation provides reasonable safety. For UNTRUSTED inputs:
+
+            1. Consider using safer alternatives:
+               - simpleeval: Simple single-expression evaluator
+               - asteval: AST-based interpreter with more Python-like features
+               - numexpr: Fast numerical expression evaluator (NumPy-focused)
+
+            2. Or use OS-level isolation:
+               - Run evaluation in a separate process/container
+               - Apply resource limits (time, memory, CPU)
+               - Use seccomp/AppArmor for system call restrictions
+
+            The current validation is defense-in-depth but should not be considered
+            a complete security boundary for arbitrary untrusted code.
         """
         if not self.validate(expression):
             raise ValueError(f"Invalid or unsafe expression: {expression}")

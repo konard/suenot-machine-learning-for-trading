@@ -392,11 +392,10 @@ impl QuantAgent {
         let market_condition = MarketCondition::classify(data);
         let evaluator = AlphaEvaluator::new(data);
 
-        // Calculate forward returns
-        let returns = data.returns();
-        // Pad returns to match data length
-        let mut forward_returns = vec![f64::NAN];
-        forward_returns.extend(returns);
+        // Forward returns: data.returns() now returns n elements where
+        // returns[i] = (close[i+1] - close[i]) / close[i] for i < n-1, with NaN at the end.
+        // This aligns factor[i] with the forward return from period i to i+1.
+        let forward_returns = data.returns();
 
         let mut successful_factors = Vec::new();
 
@@ -430,10 +429,81 @@ impl QuantAgent {
                 // Calculate IC
                 let (ic, p_value) = calculate_ic(&values, &forward_returns);
 
-                // Calculate simple metrics
+                // Calculate comprehensive quality score to match Python implementation
+                // Components: IC (0-30), IC IR (0-20), Sharpe (0-25), Drawdown (0-15), Significance (0-10)
                 let valid_count = values.iter().filter(|v| !v.is_nan()).count();
-                let quality_score = (ic.abs() * 150.0).min(30.0)
-                    + if p_value < 0.05 { 10.0 } else if p_value < 0.1 { 5.0 } else { 0.0 };
+
+                // 1. IC score (0-30 points)
+                let ic_score = (ic.abs() * 150.0).min(30.0);
+
+                // 2. IC IR score (0-20 points) - IC / IC_std_err
+                let ic_ir = if valid_count > 2 {
+                    // Approximate IC standard error as IC / sqrt(n-1)
+                    let ic_std_err = (1.0 / (valid_count as f64 - 1.0).sqrt()).max(0.001);
+                    ic.abs() / ic_std_err
+                } else {
+                    0.0
+                };
+                let ic_ir_score = (ic_ir * 10.0).min(20.0);
+
+                // 3. Sharpe score (0-25 points) - mean(values) / std(values)
+                let sharpe = {
+                    let valid_values: Vec<f64> = values.iter()
+                        .filter(|v| !v.is_nan())
+                        .copied()
+                        .collect();
+                    if valid_values.len() > 1 {
+                        let mean: f64 = valid_values.iter().sum::<f64>() / valid_values.len() as f64;
+                        let variance: f64 = valid_values.iter()
+                            .map(|v| (v - mean).powi(2))
+                            .sum::<f64>() / (valid_values.len() - 1) as f64;
+                        let std = variance.sqrt();
+                        if std > 1e-10 { mean / std } else { 0.0 }
+                    } else {
+                        0.0
+                    }
+                };
+                let sharpe_score = (sharpe.max(0.0) * 12.5).min(25.0);
+
+                // 4. Max drawdown score (0-15 points) - based on cumulative factor values
+                let max_drawdown = {
+                    let valid_values: Vec<f64> = values.iter()
+                        .filter(|v| !v.is_nan())
+                        .copied()
+                        .collect();
+                    if valid_values.len() > 1 {
+                        let mut cumulative = Vec::with_capacity(valid_values.len());
+                        let mut cum_sum = 0.0;
+                        for v in &valid_values {
+                            cum_sum += v;
+                            cumulative.push(cum_sum);
+                        }
+                        let mut peak = cumulative[0];
+                        let mut max_dd = 0.0f64;
+                        for cum in &cumulative {
+                            if *cum > peak {
+                                peak = *cum;
+                            }
+                            let dd = (peak - cum).abs();
+                            if dd > max_dd {
+                                max_dd = dd;
+                            }
+                        }
+                        // Normalize by range
+                        let range = cumulative.iter().cloned().fold(f64::NEG_INFINITY, f64::max)
+                            - cumulative.iter().cloned().fold(f64::INFINITY, f64::min);
+                        if range > 1e-10 { max_dd / range } else { 0.0 }
+                    } else {
+                        0.0
+                    }
+                };
+                let dd_score = (15.0 - max_drawdown.abs() * 30.0).max(0.0);
+
+                // 5. Significance bonus (0-10 points)
+                let sig_score = if p_value < 0.05 { 10.0 } else if p_value < 0.1 { 5.0 } else { 0.0 };
+
+                // Total quality score (0-100)
+                let quality_score = ic_score + ic_ir_score + sharpe_score + dd_score + sig_score;
 
                 let success = quality_score >= self.config.quality_threshold;
 
@@ -443,9 +513,12 @@ impl QuantAgent {
                              status, factor.name, ic, quality_score);
                 }
 
-                // Create experience
+                // Create experience with comprehensive metrics
                 let mut metrics = HashMap::new();
                 metrics.insert("ic".to_string(), ic);
+                metrics.insert("ic_ir".to_string(), ic_ir);
+                metrics.insert("sharpe_ratio".to_string(), sharpe);
+                metrics.insert("max_drawdown".to_string(), max_drawdown);
                 metrics.insert("p_value".to_string(), p_value);
                 metrics.insert("quality_score".to_string(), quality_score);
                 metrics.insert("valid_count".to_string(), valid_count as f64);

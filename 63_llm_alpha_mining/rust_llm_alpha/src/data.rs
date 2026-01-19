@@ -60,21 +60,31 @@ impl MarketData {
     }
 
     /// Calculate returns.
+    /// Returns n elements (same length as close_prices) for vector alignment.
+    /// returns[i] = (close[i+1] - close[i]) / close[i] for i < n-1, with NaN at index n-1.
+    /// This represents forward returns: returns[i] is the return from period i to period i+1.
     pub fn returns(&self) -> Vec<f64> {
         let closes = self.close_prices();
-        closes
+        let mut result: Vec<f64> = closes
             .windows(2)
             .map(|w| (w[1] - w[0]) / w[0])
-            .collect()
+            .collect();
+        result.push(f64::NAN); // Last element is undefined (no future data)
+        result
     }
 
     /// Calculate log returns.
+    /// Returns n elements (same length as close_prices) for vector alignment.
+    /// log_returns[i] = ln(close[i+1] / close[i]) for i < n-1, with NaN at index n-1.
+    /// This represents forward log returns.
     pub fn log_returns(&self) -> Vec<f64> {
         let closes = self.close_prices();
-        closes
+        let mut result: Vec<f64> = closes
             .windows(2)
             .map(|w| (w[1] / w[0]).ln())
-            .collect()
+            .collect();
+        result.push(f64::NAN); // Last element is undefined (no future data)
+        result
     }
 }
 
@@ -400,14 +410,20 @@ fn rolling_mean(data: &[f64], window: usize) -> Vec<f64> {
 }
 
 /// Calculate rolling standard deviation.
+/// Uses sample variance (ddof=1) to match pandas default behavior.
 fn rolling_std(data: &[f64], window: usize) -> Vec<f64> {
     let n = data.len();
     let mut result = vec![f64::NAN; n];
 
+    // Requires window >= 2 for valid sample std calculation
+    if window < 2 {
+        return result;
+    }
+
     for i in (window - 1)..n {
         let slice = &data[(i + 1 - window)..=i];
         let mean: f64 = slice.iter().sum::<f64>() / window as f64;
-        let variance: f64 = slice.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / window as f64;
+        let variance: f64 = slice.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / (window - 1) as f64;
         result[i] = variance.sqrt();
     }
 
@@ -430,7 +446,12 @@ mod tests {
     fn test_returns() {
         let data = generate_synthetic_data("TEST", 100, 42);
         let returns = data.returns();
-        assert_eq!(returns.len(), 99);
+        // Returns now has same length as close_prices (n elements)
+        assert_eq!(returns.len(), 100);
+        // First elements should be valid (forward returns)
+        assert!(!returns[0].is_nan());
+        // Last element should be NaN (no future data)
+        assert!(returns[99].is_nan());
     }
 
     #[test]
