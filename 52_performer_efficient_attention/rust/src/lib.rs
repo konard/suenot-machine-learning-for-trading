@@ -61,7 +61,7 @@ pub use model::{
     FAVORPlusAttention, PerformerConfig, PerformerEncoder, PerformerModel,
     TokenEmbedding,
 };
-pub use strategy::{BacktestConfig, BacktestResult, Backtester, Signal, SignalGenerator};
+pub use strategy::{BacktestConfig, BacktestResult, Backtester, Signal, SignalGenerator, SignalGeneratorConfig};
 
 /// Library version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
