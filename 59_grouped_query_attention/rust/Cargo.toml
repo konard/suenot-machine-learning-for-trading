@@ -1,0 +1,65 @@
+[package]
+name = "gqa_trading"
+version = "0.1.0"
+edition = "2021"
+description = "Grouped Query Attention (GQA) for Trading - Rust Implementation"
+license = "MIT"
+authors = ["Machine Learning for Trading"]
+readme = "README.md"
+repository = "https://github.com/suenot/machine-learning-for-trading"
+keywords = ["machine-learning", "trading", "attention", "gqa", "transformer"]
+categories = ["science", "algorithms"]
+
+[dependencies]
+# Tensor operations
+ndarray = { version = "0.15", features = ["rayon"] }
+ndarray-rand = "0.14"
+
+# Random number generation
+rand = "0.8"
+rand_distr = "0.4"
+
+# HTTP client for API calls
+reqwest = { version = "0.11", features = ["json", "blocking"] }
+
+# JSON parsing
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Parallel processing
+rayon = "1.8"
+
+# Command line interface
+clap = { version = "4.4", features = ["derive"] }
+
+# Logging
+log = "0.4"
+env_logger = "0.10"
+
+# Date/time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+[dev-dependencies]
+criterion = "0.5"
+approx = "0.5"
+
+[[bin]]
+name = "gqa_demo"
+path = "src/main.rs"
+
+[[example]]
+name = "backtest"
+path = "examples/backtest.rs"
+
+[[example]]
+name = "bybit_demo"
+path = "examples/bybit_demo.rs"
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3
