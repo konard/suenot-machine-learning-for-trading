@@ -5,11 +5,9 @@
 //! - `PrefixTuningLayer`: Prefix-tuning implementation
 //! - `FinancialSentimentModel`: Complete sentiment analysis model with LoRA
 
-use ndarray::{Array1, Array2, Axis};
+use ndarray::{Array1, Array2};
 use ndarray_rand::RandomExt;
-use rand::distributions::{Distribution, Uniform};
 use rand_distr::Normal;
-use serde::{Deserialize, Serialize};
 use std::f32::consts::PI;
 
 /// LoRA (Low-Rank Adaptation) Layer
@@ -26,7 +24,7 @@ use std::f32::consts::PI;
 /// let input = ndarray::Array1::zeros(768);
 /// let output = lora.forward(&input);
 /// ```
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct LoraLayer {
     /// Input dimension
     pub in_features: usize,
@@ -182,7 +180,7 @@ impl LoraLayer {
 ///
 /// Implements prefix-tuning where learnable prefix vectors are prepended
 /// to the input sequence to steer model behavior.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct PrefixTuningLayer {
     /// Number of prefix tokens
     pub num_prefix_tokens: usize,
@@ -261,7 +259,7 @@ impl PrefixTuningLayer {
 ///
 /// A complete model for financial sentiment classification using LoRA
 /// for parameter-efficient fine-tuning.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct FinancialSentimentModel {
     /// Base feature dimension
     pub base_dim: usize,

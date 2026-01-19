@@ -454,7 +454,8 @@ impl BybitDataLoader {
         };
 
         for i in 0..limit.min(50) {
-            let spread = i as f64 * 0.5;
+            // Base spread of 0.5 ensures bid < ask even at i=0
+            let spread = 0.5 + i as f64 * 0.5;
             bids.push(OrderbookLevel {
                 price: mid_price - spread,
                 quantity: 1.0 + (i as f64 * 0.1).sin().abs() * 10.0,

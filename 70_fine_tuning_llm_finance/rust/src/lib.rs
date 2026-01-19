@@ -35,7 +35,7 @@ pub mod evaluate;
 pub use model::{LoraLayer, FinancialSentimentModel, PrefixTuningLayer};
 pub use trainer::{FineTuningTrainer, TrainingConfig, TrainingMetrics};
 pub use data_loader::{YahooFinanceLoader, BybitDataLoader, OhlcvData};
-pub use signals::{TradingSignalGenerator, TradingSignal, SignalType};
+pub use signals::{TradingSignalGenerator, TradingSignal, SignalType, Sentiment};
 pub use backtest::{LlmBacktester, BacktestResult, BacktestConfig};
 pub use evaluate::{evaluate_sentiment, evaluate_trading, SentimentMetrics, TradingMetrics};
 
