@@ -75,6 +75,11 @@ impl CrossAttentionDataset {
     /// - X: [n_samples, n_assets, lookback, n_features]
     /// - y: [n_samples, n_assets] (future returns)
     pub fn prepare(&self) -> Option<(Vec<Vec<Vec<Vec<f64>>>>, Vec<Vec<f64>>, Vec<i64>)> {
+        // Validate config to avoid panics and divide-by-zero
+        if self.config.lookback == 0 || self.config.horizon == 0 {
+            return None;
+        }
+
         // Find minimum length across all assets
         let min_len = self.features.values().map(|f| f.len()).min()?;
 
@@ -126,11 +131,23 @@ impl CrossAttentionDataset {
 
     /// Split data into train/val/test sets
     pub fn split(&self) -> Option<(DataSplit, DataSplit, DataSplit)> {
+        // Validate ratios to avoid panics and out-of-bounds
+        if !(0.0..=1.0).contains(&self.config.train_ratio)
+            || !(0.0..=1.0).contains(&self.config.val_ratio)
+            || self.config.train_ratio + self.config.val_ratio > 1.0
+        {
+            return None;
+        }
+
         let (x, y, timestamps) = self.prepare()?;
 
         let n = x.len();
+        if n == 0 {
+            return None;
+        }
+
         let train_end = (n as f64 * self.config.train_ratio) as usize;
-        let val_end = train_end + (n as f64 * self.config.val_ratio) as usize;
+        let val_end = (train_end + (n as f64 * self.config.val_ratio) as usize).min(n);
 
         let train = DataSplit {
             x: x[..train_end].to_vec(),

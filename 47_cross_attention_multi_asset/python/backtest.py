@@ -68,7 +68,7 @@ class CrossAttentionBacktest:
         n_assets = X.shape[1]
 
         capital = self.config.initial_capital
-        positions = np.zeros(n_assets)
+        positions = None  # Will be set on first rebalance
 
         results = []
 
@@ -83,14 +83,17 @@ class CrossAttentionBacktest:
             weights = self._process_weights(weights)
 
             # Calculate transaction costs
-            position_change = np.abs(weights - positions).sum()
+            position_change = np.abs(weights - positions).sum() if positions is not None else weights.sum()
             costs = position_change * self.config.transaction_cost * capital
+
+            # Update positions at start of period to use model predictions immediately
+            positions = weights.copy()
 
             # Simulate trading for each timestep until next rebalance
             period_end = min(i + self.config.rebalance_freq, n_samples)
 
             for j in range(i, period_end):
-                # Calculate portfolio return
+                # Calculate portfolio return using current positions
                 portfolio_return = np.sum(positions * returns[j])
                 capital = capital * (1 + portfolio_return)
 
@@ -106,9 +109,6 @@ class CrossAttentionBacktest:
                     'weights': weights.copy(),
                     'costs': costs if j == i else 0.0
                 })
-
-            # Update positions for next period
-            positions = weights.copy()
 
         return pd.DataFrame(results)
 
@@ -142,6 +142,14 @@ class CrossAttentionBacktest:
 
         # Apply position limits
         processed = np.clip(processed, -self.config.max_position, self.config.max_position)
+
+        # Renormalize after clipping to maintain full investment
+        if self.config.allow_short:
+            total = np.abs(processed).sum() + 1e-8
+            processed = processed / total
+        else:
+            total = processed.sum() + 1e-8
+            processed = processed / total
 
         return processed
 

@@ -8,6 +8,8 @@
 use cross_attention_multi_asset::strategy::{
     Backtest, BacktestConfig, SignalGenerator, SignalConfig,
 };
+use rand::prelude::*;
+use rand_distr::StandardNormal;
 
 #[derive(Debug)]
 struct BacktestArgs {
@@ -68,27 +70,10 @@ fn parse_args() -> BacktestArgs {
     backtest_args
 }
 
-/// Simple random number for generating mock market data
-mod rand {
-    static mut SEED: u64 = 42;
-
-    pub fn random() -> f64 {
-        unsafe {
-            SEED = SEED.wrapping_mul(6364136223846793005).wrapping_add(1);
-            (SEED >> 33) as f64 / (1u64 << 31) as f64
-        }
-    }
-
-    pub fn randn() -> f64 {
-        // Box-Muller transform for normal distribution
-        let u1 = random();
-        let u2 = random();
-        (-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos()
-    }
-}
-
 /// Generate realistic mock market data
 fn generate_market_data(n_steps: usize, n_assets: usize) -> (Vec<Vec<f64>>, Vec<Vec<f64>>) {
+    let mut rng = thread_rng();
+
     // Parameters for different assets
     let mean_returns = vec![0.0001, 0.00015, 0.0002, 0.00005, 0.00012];
     let volatilities = vec![0.02, 0.025, 0.03, 0.015, 0.022];
@@ -104,8 +89,8 @@ fn generate_market_data(n_steps: usize, n_assets: usize) -> (Vec<Vec<f64>>, Vec<
     let mut returns: Vec<Vec<f64>> = Vec::with_capacity(n_steps);
 
     for _ in 0..n_steps {
-        // Generate independent random normals
-        let z: Vec<f64> = (0..n_assets).map(|_| rand::randn()).collect();
+        // Generate independent random normals using safe rand crate
+        let z: Vec<f64> = (0..n_assets).map(|_| rng.sample(StandardNormal)).collect();
 
         // Apply correlation structure (simplified Cholesky)
         let mut correlated_z = vec![0.0; n_assets];

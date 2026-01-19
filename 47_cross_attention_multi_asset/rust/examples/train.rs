@@ -4,10 +4,13 @@
 //!
 //! Usage:
 //!     cargo run --release --example train -- --epochs 50 --batch-size 32
+//!
+//! Note: The --fetch-data flag is currently not implemented. The example only supports mock data.
 
 use candle_core::{DType, Device, Result, Tensor};
 use candle_nn::{VarBuilder, VarMap, Optimizer, AdamW, ParamsAdamW};
 use cross_attention_multi_asset::model::{CrossAttentionMultiAsset, ModelConfig, OutputType};
+use rand::prelude::*;
 
 #[derive(Debug)]
 struct TrainArgs {
@@ -96,6 +99,7 @@ fn parse_args() -> TrainArgs {
 fn generate_mock_data(n_samples: usize, n_assets: usize, seq_len: usize, n_features: usize)
     -> (Vec<f32>, Vec<f32>)
 {
+    let mut rng = thread_rng();
     let mut x = Vec::with_capacity(n_samples * n_assets * seq_len * n_features);
     let mut y = Vec::with_capacity(n_samples * n_assets);
 
@@ -106,7 +110,7 @@ fn generate_mock_data(n_samples: usize, n_assets: usize, seq_len: usize, n_featu
                 for f in 0..n_features {
                     // Simple sinusoidal patterns with noise
                     let val = ((i + t + a + f) as f64 * 0.1).sin() * 0.1
-                        + (rand::random::<f64>() - 0.5) * 0.01;
+                        + (rng.gen::<f64>() - 0.5) * 0.01;
                     x.push(val as f32);
                 }
             }
@@ -127,19 +131,6 @@ fn generate_mock_data(n_samples: usize, n_assets: usize, seq_len: usize, n_featu
     }
 
     (x, y)
-}
-
-/// Simple random number generator (for mock data)
-mod rand {
-    static mut SEED: u64 = 12345;
-
-    pub fn random<T: From<f64>>() -> T {
-        unsafe {
-            SEED = SEED.wrapping_mul(6364136223846793005).wrapping_add(1);
-            let val = (SEED >> 33) as f64 / (1u64 << 31) as f64;
-            T::from(val)
-        }
-    }
 }
 
 fn main() -> Result<()> {
@@ -172,6 +163,13 @@ fn main() -> Result<()> {
     println!("\n{}", "-".repeat(40));
     println!("Preparing data...");
     println!("{}", "-".repeat(40));
+
+    // Check if user requested real data fetching (not yet implemented)
+    if !args.use_mock_data {
+        eprintln!("Error: --fetch-data is not implemented for this example yet.");
+        eprintln!("Please run without --fetch-data to use mock data for demonstration.");
+        std::process::exit(1);
+    }
 
     let (train_x, train_y) = generate_mock_data(n_train_samples, n_assets, seq_len, n_features);
     let (val_x, val_y) = generate_mock_data(n_val_samples, n_assets, seq_len, n_features);

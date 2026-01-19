@@ -80,6 +80,17 @@ impl Features {
 
 /// Compute features from candle data
 pub fn compute_features(candles: &[Candle], config: &FeatureConfig) -> Vec<Features> {
+    // Validate config to avoid panics and divide-by-zero
+    if config.ma_window == 0
+        || config.volatility_window == 0
+        || config.rsi_period == 0
+        || config.macd_fast == 0
+        || config.macd_slow == 0
+        || config.momentum_period == 0
+    {
+        return Vec::new();
+    }
+
     let n = candles.len();
     if n < config.macd_slow + 1 {
         return Vec::new();
@@ -124,13 +135,14 @@ pub fn compute_features(candles: &[Candle], config: &FeatureConfig) -> Vec<Featu
         let r = rsi.get(i).copied().unwrap_or(50.0);
         let macd_val = ema_fast.get(i).unwrap_or(&0.0) - ema_slow.get(i).unwrap_or(&0.0);
         let mom = momentum.get(i).copied().unwrap_or(0.0);
+        let price = closes[i];
 
         features.push(Features {
             log_return: log_ret,
             volume_ratio: vol_ratio,
             volatility: vol,
             rsi: r / 100.0, // Normalize to [0, 1]
-            macd: macd_val / closes[i], // Normalize by price
+            macd: if price != 0.0 { macd_val / price } else { 0.0 }, // Normalize by price
             momentum: mom,
         });
     }
@@ -232,7 +244,12 @@ fn compute_momentum(prices: &[f64], period: usize) -> Vec<f64> {
     let mut result = vec![0.0; n];
 
     for i in period..n {
-        result[i] = (prices[i] - prices[i - period]) / prices[i - period];
+        let denom = prices[i - period];
+        result[i] = if denom != 0.0 {
+            (prices[i] - denom) / denom
+        } else {
+            0.0
+        };
     }
 
     result

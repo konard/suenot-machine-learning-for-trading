@@ -13,23 +13,32 @@
 //! # Example
 //!
 //! ```rust,ignore
+//! use candle_core::{DType, Device};
+//! use candle_nn::{VarBuilder, VarMap};
 //! use cross_attention_multi_asset::{
 //!     model::{CrossAttentionMultiAsset, ModelConfig, OutputType},
 //!     data::{BybitClient, compute_features},
 //!     strategy::{Backtest, BacktestConfig},
 //! };
 //!
-//! // Create model
+//! // Create model with VarBuilder
+//! let device = Device::Cpu;
+//! let varmap = VarMap::new();
+//! let vb = VarBuilder::from_varmap(&varmap, DType::F32, &device);
 //! let config = ModelConfig::default();
-//! let model = CrossAttentionMultiAsset::new(&config)?;
+//! let model = CrossAttentionMultiAsset::new(&config, vb)?;
 //!
 //! // Fetch data
 //! let client = BybitClient::new();
-//! let data = client.fetch_klines("BTCUSDT", "60", 1000).await?;
+//! let candles = client.fetch_klines("BTCUSDT", "60", 1000).await?;
 //!
-//! // Run backtest
-//! let backtest_config = BacktestConfig::default();
-//! let results = Backtest::run(&model, &data, &backtest_config)?;
+//! // Run backtest with pre-computed weights and returns
+//! let backtest = Backtest::new(BacktestConfig::default());
+//! let weights: Vec<Vec<f64>> = vec![vec![0.2; 5]; 100];  // Example weights
+//! let returns: Vec<Vec<f64>> = vec![vec![0.01; 5]; 100]; // Example returns
+//! let symbols = vec!["BTC".to_string(), "ETH".to_string()];
+//! let timestamps: Vec<i64> = (0..100).map(|i| i * 3600000).collect();
+//! let results = backtest.run(&weights, &returns, &symbols, &timestamps);
 //! ```
 
 pub mod model;

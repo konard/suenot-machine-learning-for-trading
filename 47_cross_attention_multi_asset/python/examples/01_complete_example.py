@@ -217,8 +217,8 @@ def main():
 
     print(f"\nTraining complete. Best val loss: {best_val_loss:.6f}")
 
-    # Load best model
-    model.load_state_dict(torch.load('best_model.pt'))
+    # Load best model (use weights_only=True to mitigate RCE risk)
+    model.load_state_dict(torch.load('best_model.pt', weights_only=True))
 
     # =========================================================================
     # Step 5: Run Backtest

@@ -1,5 +1,6 @@
 # Core dependencies
-torch>=2.0.0
+# NOTE: torch>=2.6.0 required to fix CVE-2025-32434 (RCE via torch.load)
+torch>=2.6.0
 numpy>=1.21.0
 pandas>=1.3.0
 requests>=2.25.0
@@ -12,4 +13,5 @@ matplotlib>=3.4.0
 seaborn>=0.11.0
 
 # Optional: for development/testing
-scikit-learn>=1.0.0
+# NOTE: scikit-learn>=1.5.0 required to fix GHSA-jw8x-6495-233v
+scikit-learn>=1.5.0
