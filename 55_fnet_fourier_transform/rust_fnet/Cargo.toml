@@ -1,0 +1,76 @@
+[package]
+name = "fnet_trading"
+version = "0.1.0"
+edition = "2021"
+authors = ["Machine Learning for Trading"]
+description = "FNet (Fourier Transform) implementation for financial time series prediction"
+license = "MIT"
+repository = "https://github.com/suenot/machine-learning-for-trading"
+keywords = ["machine-learning", "trading", "fnet", "fourier-transform", "deep-learning"]
+categories = ["science", "finance"]
+
+[lib]
+name = "fnet_trading"
+path = "src/lib.rs"
+
+[[example]]
+name = "fetch_data"
+path = "examples/fetch_data.rs"
+
+[[example]]
+name = "model_demo"
+path = "examples/model_demo.rs"
+
+[[example]]
+name = "backtest"
+path = "examples/backtest.rs"
+
+[dependencies]
+# Linear algebra and arrays
+ndarray = { version = "0.15", features = ["rayon"] }
+ndarray-rand = "0.14"
+
+# FFT implementation
+rustfft = "6.1"
+
+# HTTP client for API calls
+reqwest = { version = "0.11", features = ["json", "blocking"] }
+
+# JSON parsing
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Random number generation
+rand = "0.8"
+rand_distr = "0.4"
+
+# CLI argument parsing
+clap = { version = "4.0", features = ["derive"] }
+
+# Date and time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Parallel processing
+rayon = "1.7"
+
+# Logging
+log = "0.4"
+env_logger = "0.10"
+
+# Progress bars
+indicatif = "0.17"
+
+[dev-dependencies]
+approx = "0.5"
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3
