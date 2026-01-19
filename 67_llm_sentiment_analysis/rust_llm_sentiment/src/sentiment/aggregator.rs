@@ -59,7 +59,11 @@ impl SentimentAggregator {
     }
 
     /// Set time decay half-life
+    ///
+    /// # Panics
+    /// Panics if half_life_hours is not positive
     pub fn with_decay(mut self, half_life_hours: f64) -> Self {
+        assert!(half_life_hours > 0.0, "half_life_hours must be > 0");
         self.decay_half_life_hours = half_life_hours;
         self
     }
@@ -77,11 +81,20 @@ impl SentimentAggregator {
     }
 
     /// Aggregate sentiment results with time weighting
+    ///
+    /// # Panics
+    /// Panics if results and sources have different lengths
     pub fn aggregate(
         &self,
         results: &[SentimentResult],
         sources: &[NewsSource],
     ) -> AggregatedSentiment {
+        assert_eq!(
+            results.len(),
+            sources.len(),
+            "results and sources must have same length"
+        );
+
         if results.is_empty() {
             return AggregatedSentiment {
                 score: 0.0,

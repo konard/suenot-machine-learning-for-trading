@@ -266,14 +266,25 @@ impl BybitClient {
                     continue;
                 }
 
+                let parse_i64 = |value: &str, field: &str| -> Result<i64, BybitError> {
+                    value.parse().map_err(|_| {
+                        BybitError::InvalidResponse(format!("Invalid {}: {}", field, value))
+                    })
+                };
+                let parse_f64 = |value: &str, field: &str| -> Result<f64, BybitError> {
+                    value.parse().map_err(|_| {
+                        BybitError::InvalidResponse(format!("Invalid {}: {}", field, value))
+                    })
+                };
+
                 let candle = Candle {
-                    timestamp: item[0].parse().unwrap_or(0),
-                    open: item[1].parse().unwrap_or(0.0),
-                    high: item[2].parse().unwrap_or(0.0),
-                    low: item[3].parse().unwrap_or(0.0),
-                    close: item[4].parse().unwrap_or(0.0),
-                    volume: item[5].parse().unwrap_or(0.0),
-                    turnover: item[6].parse().unwrap_or(0.0),
+                    timestamp: parse_i64(&item[0], "timestamp")?,
+                    open: parse_f64(&item[1], "open")?,
+                    high: parse_f64(&item[2], "high")?,
+                    low: parse_f64(&item[3], "low")?,
+                    close: parse_f64(&item[4], "close")?,
+                    volume: parse_f64(&item[5], "volume")?,
+                    turnover: parse_f64(&item[6], "turnover")?,
                 };
 
                 if candle.timestamp >= current_start && candle.timestamp < end_ms {
@@ -329,13 +340,27 @@ impl BybitClient {
 
         Ok(Ticker {
             symbol: item.symbol.clone(),
-            last_price: item.last_price.parse().unwrap_or(0.0),
-            bid_price: item.bid1_price.parse().unwrap_or(0.0),
-            ask_price: item.ask1_price.parse().unwrap_or(0.0),
-            volume_24h: item.volume_24h.parse().unwrap_or(0.0),
-            price_change_percent_24h: item.price_24h_pcnt.parse::<f64>().unwrap_or(0.0) * 100.0,
-            high_24h: item.high_price_24h.parse().unwrap_or(0.0),
-            low_24h: item.low_price_24h.parse().unwrap_or(0.0),
+            last_price: item.last_price.parse().map_err(|_| {
+                BybitError::InvalidResponse(format!("Invalid last_price: {}", item.last_price))
+            })?,
+            bid_price: item.bid1_price.parse().map_err(|_| {
+                BybitError::InvalidResponse(format!("Invalid bid1_price: {}", item.bid1_price))
+            })?,
+            ask_price: item.ask1_price.parse().map_err(|_| {
+                BybitError::InvalidResponse(format!("Invalid ask1_price: {}", item.ask1_price))
+            })?,
+            volume_24h: item.volume_24h.parse().map_err(|_| {
+                BybitError::InvalidResponse(format!("Invalid volume_24h: {}", item.volume_24h))
+            })?,
+            price_change_percent_24h: item.price_24h_pcnt.parse::<f64>().map_err(|_| {
+                BybitError::InvalidResponse(format!("Invalid price_24h_pcnt: {}", item.price_24h_pcnt))
+            })? * 100.0,
+            high_24h: item.high_price_24h.parse().map_err(|_| {
+                BybitError::InvalidResponse(format!("Invalid high_price_24h: {}", item.high_price_24h))
+            })?,
+            low_24h: item.low_price_24h.parse().map_err(|_| {
+                BybitError::InvalidResponse(format!("Invalid low_price_24h: {}", item.low_price_24h))
+            })?,
         })
     }
 

@@ -143,14 +143,39 @@ impl CryptoTerminology {
         Self { slang }
     }
 
+    /// Tokenize text into words, removing punctuation
+    fn tokenize(text: &str) -> Vec<String> {
+        text.to_lowercase()
+            .split_whitespace()
+            .map(|t| t.trim_matches(|c: char| !c.is_alphanumeric()).to_string())
+            .filter(|t| !t.is_empty())
+            .collect()
+    }
+
+    /// Check if tokens contain a term (single word or phrase)
+    fn tokens_contain_term(tokens: &[String], term: &str) -> bool {
+        let term_tokens: Vec<&str> = term.split_whitespace().collect();
+        if term_tokens.len() == 1 {
+            tokens.iter().any(|t| t == term_tokens[0])
+        } else {
+            tokens
+                .windows(term_tokens.len())
+                .any(|w| w.iter().map(|s| s.as_str()).eq(term_tokens.iter().copied()))
+        }
+    }
+
     /// Process text for crypto terminology
     pub fn analyze(&self, text: &str) -> CryptoSlangResult {
-        let text_lower = text.to_lowercase();
+        let tokens = Self::tokenize(text);
         let mut found_terms: Vec<(String, SlangSentiment, f64)> = Vec::new();
         let mut sentiment_scores: Vec<f64> = Vec::new();
 
-        for (term, (sentiment, intensity)) in &self.slang {
-            if text_lower.contains(term) {
+        // Sort terms by length (descending) to match longer phrases first
+        let mut sorted_terms: Vec<_> = self.slang.iter().collect();
+        sorted_terms.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+
+        for (term, (sentiment, intensity)) in sorted_terms {
+            if Self::tokens_contain_term(&tokens, term) {
                 found_terms.push((term.clone(), *sentiment, *intensity));
 
                 match sentiment {
@@ -178,7 +203,8 @@ impl CryptoTerminology {
 
     /// Check if text contains specific crypto slang
     pub fn contains_term(&self, text: &str, term: &str) -> bool {
-        text.to_lowercase().contains(&term.to_lowercase())
+        let tokens = Self::tokenize(text);
+        Self::tokens_contain_term(&tokens, &term.to_lowercase())
     }
 
     /// Get sentiment for a specific term

@@ -254,6 +254,21 @@ impl SignalGenerator {
 
         // Calculate weighted average sentiment
         let total_weight: f64 = results.iter().map(|r| r.confidence).sum();
+
+        // Guard against zero total confidence to avoid NaN
+        if total_weight == 0.0 {
+            return GeneratedSignal {
+                signal: TradingSignal::Hold,
+                strength: SignalStrength::VeryWeak,
+                sentiment_score: 0.0,
+                confidence: 0.0,
+                position_size: 0.0,
+                stop_loss: self.stop_loss_pct,
+                take_profit: self.take_profit_pct,
+                reason: "Aggregated confidence is zero".to_string(),
+            };
+        }
+
         let weighted_score: f64 = results
             .iter()
             .map(|r| r.score * r.confidence)

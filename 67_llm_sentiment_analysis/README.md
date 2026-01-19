@@ -190,9 +190,6 @@ We provide comprehensive Python notebooks:
 | 3 | `03_finbert_sentiment.py` | FinBERT sentiment analysis |
 | 4 | `04_gpt_sentiment.py` | GPT-based sentiment with reasoning |
 | 5 | `05_crypto_sentiment.py` | Crypto-specific sentiment analysis |
-| 6 | `06_signal_generation.py` | Convert sentiment to trading signals |
-| 7 | `07_backtesting.py` | Backtest sentiment strategies |
-| 8 | `08_comparison.py` | Compare with baseline strategies |
 
 #### Basic FinBERT Example
 

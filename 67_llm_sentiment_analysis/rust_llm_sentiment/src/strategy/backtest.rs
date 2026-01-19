@@ -203,8 +203,10 @@ impl Backtester {
                 if should_exit {
                     let exit_price = self.apply_slippage(candle.close, -pos.direction);
                     let pnl = pos.calculate_pnl(exit_price);
-                    let fee = pos.size.abs() * self.config.fee_pct;
-                    let net_pnl = pnl - fee;
+                    let exit_fee = pos.size.abs() * self.config.fee_pct;
+                    let net_pnl = pnl - exit_fee;
+                    // Include entry fee in trade PnL for accurate per-trade metrics
+                    let trade_pnl = net_pnl - pos.entry_fee;
 
                     trades.push(Trade {
                         entry_time: pos.entry_time,
@@ -213,8 +215,8 @@ impl Backtester {
                         exit_price,
                         position_size: pos.size,
                         direction: pos.direction,
-                        pnl: net_pnl,
-                        return_pct: net_pnl / pos.size.abs() * 100.0,
+                        pnl: trade_pnl,
+                        return_pct: trade_pnl / pos.size.abs() * 100.0,
                         exit_reason,
                     });
 
@@ -228,16 +230,17 @@ impl Backtester {
                 let direction = signal.signal.direction();
                 let position_value = capital * signal.position_size.min(self.config.max_position_size);
                 let entry_price = self.apply_slippage(candle.close, direction);
-                let fee = position_value * self.config.fee_pct;
+                let entry_fee = position_value * self.config.fee_pct;
 
                 position = Some(Position {
                     entry_time: candle.timestamp,
                     entry_price,
                     size: position_value,
                     direction,
+                    entry_fee,
                 });
 
-                capital -= fee;
+                capital -= entry_fee;
             }
         }
 
@@ -246,8 +249,10 @@ impl Backtester {
             let last_candle = candles.last().unwrap();
             let exit_price = self.apply_slippage(last_candle.close, -pos.direction);
             let pnl = pos.calculate_pnl(exit_price);
-            let fee = pos.size.abs() * self.config.fee_pct;
-            let net_pnl = pnl - fee;
+            let exit_fee = pos.size.abs() * self.config.fee_pct;
+            let net_pnl = pnl - exit_fee;
+            // Include entry fee in trade PnL for accurate per-trade metrics
+            let trade_pnl = net_pnl - pos.entry_fee;
 
             trades.push(Trade {
                 entry_time: pos.entry_time,
@@ -256,8 +261,8 @@ impl Backtester {
                 exit_price,
                 position_size: pos.size,
                 direction: pos.direction,
-                pnl: net_pnl,
-                return_pct: net_pnl / pos.size.abs() * 100.0,
+                pnl: trade_pnl,
+                return_pct: trade_pnl / pos.size.abs() * 100.0,
                 exit_reason: "End of Backtest".to_string(),
             });
 
@@ -414,6 +419,7 @@ struct Position {
     entry_price: f64,
     size: f64,
     direction: i32,
+    entry_fee: f64,
 }
 
 impl Position {

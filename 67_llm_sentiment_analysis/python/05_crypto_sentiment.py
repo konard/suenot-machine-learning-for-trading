@@ -151,6 +151,14 @@ class SocialMediaSentimentAggregator:
         Returns:
             Aggregated sentiment result
         """
+        if not source_sentiments:
+            return {
+                'aggregated_score': 0.0,
+                'total_volume': 0,
+                'source_breakdown': {},
+                'dominant_source': 'unknown'
+            }
+
         weighted_sum = 0.0
         total_weight = 0.0
         total_volume = 0
@@ -203,16 +211,35 @@ class CryptoSentimentAnalyzer:
 
         Returns:
             CryptoSentimentResult with comprehensive analysis
+
+        Raises:
+            ValueError: If source_labels length doesn't match texts length
         """
         if source_labels is None:
             source_labels = ['unknown'] * len(texts)
+        elif len(source_labels) != len(texts):
+            raise ValueError("source_labels must match texts length")
+
+        # Handle empty or all-whitespace texts
+        if not texts or all(not text.strip() for text in texts):
+            return CryptoSentimentResult(
+                symbol=symbol,
+                sentiment_score=0.0,
+                sentiment_level=CryptoSentimentLevel.NEUTRAL,
+                confidence=0.0,
+                sources={},
+                key_topics=[],
+                whale_activity=self._mock_whale_activity(symbol),
+                social_volume=0,
+                timestamp=datetime.now()
+            )
 
         # Analyze each text
         text_sentiments = []
         source_data = {}
         all_topics = []
 
-        for text, source in zip(texts, source_labels):
+        for text, source in zip(texts, source_labels, strict=True):
             # Process crypto terminology
             slang_result = self.terminology_processor.process_text(text)
 
