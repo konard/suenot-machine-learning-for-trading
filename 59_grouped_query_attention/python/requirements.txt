@@ -1,0 +1,17 @@
+# Core dependencies for GQA Trading Model
+torch>=2.0.0
+numpy>=1.21.0
+
+# Data loading
+requests>=2.28.0
+yfinance>=0.2.0
+
+# Optional: visualization
+matplotlib>=3.5.0
+
+# Optional: progress bars
+tqdm>=4.64.0
+
+# Development dependencies
+pytest>=7.0.0
+pytest-cov>=4.0.0
