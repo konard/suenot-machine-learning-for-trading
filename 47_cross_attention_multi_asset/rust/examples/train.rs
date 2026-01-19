@@ -84,6 +84,14 @@ fn parse_args() -> TrainArgs {
                     i += 1;
                 }
             }
+            "--n-layers" => {
+                if i + 1 < args.len() {
+                    train_args.n_layers = args[i + 1].parse().unwrap_or(2);
+                    i += 2;
+                } else {
+                    i += 1;
+                }
+            }
             "--fetch-data" => {
                 train_args.use_mock_data = false;
                 i += 1;
@@ -147,6 +155,13 @@ fn main() -> Result<()> {
     println!("  Attention heads: {}", args.n_heads);
     println!("  Encoder layers: {}", args.n_layers);
     println!("  Using mock data: {}", args.use_mock_data);
+
+    // Validate d_model and n_heads before model construction
+    if args.n_heads == 0 || args.d_model % args.n_heads != 0 {
+        eprintln!("Error: --d-model ({}) must be divisible by --n-heads ({}) and --n-heads > 0.",
+                  args.d_model, args.n_heads);
+        std::process::exit(1);
+    }
 
     // Setup device
     let device = Device::Cpu;
@@ -278,8 +293,9 @@ fn main() -> Result<()> {
         let val_return = (&val_predictions * &val_y_tensor)?.sum_all()?;
         let val_loss = -val_return.to_scalar::<f32>()? as f64;
 
-        // Track best model
-        if val_loss < best_val_loss {
+        // Track best model - capture flag before updating
+        let is_best = val_loss < best_val_loss;
+        if is_best {
             best_val_loss = val_loss;
             // Save model weights here if needed
         }
@@ -292,7 +308,7 @@ fn main() -> Result<()> {
                 args.epochs,
                 train_loss,
                 val_loss,
-                if val_loss <= best_val_loss { " *" } else { "" }
+                if is_best { " *" } else { "" }
             );
         }
     }

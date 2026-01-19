@@ -122,6 +122,11 @@ class CrossAttentionBacktest:
         elif output_type == 'classification':
             # Convert class probabilities to positions
             # Assume: [down, neutral, up] classes
+            if len(weights) % 3 != 0:
+                raise ValueError(
+                    f"Classification output length {len(weights)} is not divisible by 3. "
+                    f"Expected output shape: (n_assets * 3,) for [down, neutral, up] classes."
+                )
             n_assets = len(weights) // 3
             weights = weights.reshape(n_assets, 3)
             processed = weights[:, 2] - weights[:, 0]  # up - down

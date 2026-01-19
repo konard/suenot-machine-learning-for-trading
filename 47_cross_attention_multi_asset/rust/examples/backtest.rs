@@ -72,9 +72,15 @@ fn parse_args() -> BacktestArgs {
 
 /// Generate realistic mock market data
 fn generate_market_data(n_steps: usize, n_assets: usize) -> (Vec<Vec<f64>>, Vec<Vec<f64>>) {
+    // Validate n_assets to prevent out-of-bounds access
+    if n_assets > 5 {
+        eprintln!("Warning: n_assets ({}) > 5. Using only first 5 assets for correlation structure.", n_assets);
+    }
+    let effective_assets = n_assets.min(5);
+
     let mut rng = thread_rng();
 
-    // Parameters for different assets
+    // Parameters for different assets (up to 5 supported)
     let mean_returns = vec![0.0001, 0.00015, 0.0002, 0.00005, 0.00012];
     let volatilities = vec![0.02, 0.025, 0.03, 0.015, 0.022];
     let correlations = vec![
@@ -90,11 +96,11 @@ fn generate_market_data(n_steps: usize, n_assets: usize) -> (Vec<Vec<f64>>, Vec<
 
     for _ in 0..n_steps {
         // Generate independent random normals using safe rand crate
-        let z: Vec<f64> = (0..n_assets).map(|_| rng.sample(StandardNormal)).collect();
+        let z: Vec<f64> = (0..effective_assets).map(|_| rng.sample(StandardNormal)).collect();
 
         // Apply correlation structure (simplified Cholesky)
-        let mut correlated_z = vec![0.0; n_assets];
-        for i in 0..n_assets {
+        let mut correlated_z = vec![0.0; effective_assets];
+        for i in 0..effective_assets {
             for j in 0..=i {
                 correlated_z[i] += correlations[i][j] * z[j];
             }
@@ -106,8 +112,8 @@ fn generate_market_data(n_steps: usize, n_assets: usize) -> (Vec<Vec<f64>>, Vec<
         }
 
         // Apply mean and volatility
-        let step_returns: Vec<f64> = (0..n_assets)
-            .map(|i| mean_returns[i.min(4)] + volatilities[i.min(4)] * correlated_z[i])
+        let step_returns: Vec<f64> = (0..effective_assets)
+            .map(|i| mean_returns[i] + volatilities[i] * correlated_z[i])
             .collect();
 
         returns.push(step_returns);
@@ -118,9 +124,9 @@ fn generate_market_data(n_steps: usize, n_assets: usize) -> (Vec<Vec<f64>>, Vec<
 
     for t in 0..n_steps {
         // Base weights
-        let mut w: Vec<f64> = (0..n_assets)
+        let mut w: Vec<f64> = (0..effective_assets)
             .map(|i| {
-                let base = 1.0 / n_assets as f64;
+                let base = 1.0 / effective_assets as f64;
                 let momentum = if t >= 20 {
                     returns[t - 20..t]
                         .iter()
@@ -168,13 +174,12 @@ fn main() {
 
     let (weights, returns) = generate_market_data(args.n_steps, args.n_assets);
 
-    let symbols: Vec<String> = vec![
-        "BTC".to_string(),
-        "ETH".to_string(),
-        "SOL".to_string(),
-        "AVAX".to_string(),
-        "DOT".to_string(),
-    ];
+    // Dynamic symbol generation based on n_assets (capped at 5 for correlation structure)
+    let default_symbols = ["BTC", "ETH", "SOL", "AVAX", "DOT"];
+    let effective_assets = args.n_assets.min(5);
+    let symbols: Vec<String> = (0..effective_assets)
+        .map(|i| default_symbols[i].to_string())
+        .collect();
 
     let timestamps: Vec<i64> = (0..args.n_steps)
         .map(|i| 1704067200000 + i as i64 * 3600000) // Starting from 2024-01-01
@@ -325,15 +330,19 @@ fn main() {
 
     // Analyze last few predicted weights
     println!("\nLast 5 weight predictions:");
-    println!("{:>8} {:>8} {:>8} {:>8} {:>8} {:>8}",
-             "Step", &symbols[0], &symbols[1], &symbols[2], &symbols[3], &symbols[4]);
+    print!("{:>8}", "Step");
+    for sym in &symbols {
+        print!(" {:>8}", sym);
+    }
+    println!();
 
     for i in (args.n_steps - 5)..args.n_steps {
         let w = &weights[i];
-        println!(
-            "{:>8} {:>8.3} {:>8.3} {:>8.3} {:>8.3} {:>8.3}",
-            i, w[0], w[1], w[2], w[3], w[4]
-        );
+        print!("{:>8}", i);
+        for weight in w {
+            print!(" {:>8.3}", weight);
+        }
+        println!();
     }
 
     // Generate signals from last weights
