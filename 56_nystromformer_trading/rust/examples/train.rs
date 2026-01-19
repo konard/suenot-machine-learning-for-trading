@@ -47,15 +47,27 @@ fn main() {
     // Simulate training loop
     println!("\nSimulating training (forward passes only)...");
     let num_epochs = 3;
-    let num_batches = train.len() / batch_size;
+    // Use ceiling division to handle partial batches
+    let num_batches = (train.len() + batch_size - 1) / batch_size;
+
+    if num_batches == 0 {
+        println!("Not enough training samples for one batch.");
+        return;
+    }
 
     for epoch in 0..num_epochs {
         let mut epoch_loss = 0.0;
+        let mut valid_batches = 0;
 
         for batch_idx in 0..num_batches {
-            // Get batch indices
+            // Get batch indices, handling partial last batch
             let start = batch_idx * batch_size;
-            let indices: Vec<usize> = (start..start + batch_size).collect();
+            let end = (start + batch_size).min(train.len());
+            let indices: Vec<usize> = (start..end).collect();
+
+            if indices.is_empty() {
+                continue;
+            }
 
             // Get batch
             let (x_batch, y_batch) = train.get_batch(&indices);
@@ -65,58 +77,74 @@ fn main() {
 
             // Calculate MSE loss
             let mut batch_loss = 0.0;
-            for b in 0..batch_size {
+            let actual_batch_size = indices.len();
+            for b in 0..actual_batch_size {
                 for h in 0..horizon {
                     let diff = predictions[[b, h]] - y_batch[[b, h]];
                     batch_loss += diff * diff;
                 }
             }
-            batch_loss /= (batch_size * horizon) as f64;
+            batch_loss /= (actual_batch_size * horizon) as f64;
             epoch_loss += batch_loss;
+            valid_batches += 1;
         }
 
-        epoch_loss /= num_batches as f64;
-        println!("Epoch {}/{}: Loss = {:.6}", epoch + 1, num_epochs, epoch_loss);
+        if valid_batches > 0 {
+            epoch_loss /= valid_batches as f64;
+            println!("Epoch {}/{}: Loss = {:.6}", epoch + 1, num_epochs, epoch_loss);
+        }
     }
 
     // Validation
     println!("\nValidating model...");
-    let val_indices: Vec<usize> = (0..val.len().min(batch_size)).collect();
-    let (x_val, y_val) = val.get_batch(&val_indices);
-    let (predictions, attention) = model.forward(&x_val);
+    if val.is_empty() {
+        println!("Skipping validation: no validation samples.");
+    } else {
+        let val_indices: Vec<usize> = (0..val.len().min(batch_size)).collect();
+        let (x_val, y_val) = val.get_batch(&val_indices);
+        let (predictions, attention) = model.forward(&x_val);
 
-    let mut val_loss = 0.0;
-    for b in 0..val_indices.len() {
-        for h in 0..horizon {
-            let diff = predictions[[b, h]] - y_val[[b, h]];
-            val_loss += diff * diff;
+        let mut val_loss = 0.0;
+        for b in 0..val_indices.len() {
+            for h in 0..horizon {
+                let diff = predictions[[b, h]] - y_val[[b, h]];
+                val_loss += diff * diff;
+            }
         }
-    }
-    val_loss /= (val_indices.len() * horizon) as f64;
-    println!("Validation Loss: {:.6}", val_loss);
-
-    // Show attention statistics
-    if let Some(ref lw) = attention.landmark_weights {
-        let mean_attention: f64 = lw.iter().sum::<f64>() / lw.len() as f64;
-        println!("\nAttention Statistics:");
-        println!("  Mean landmark attention: {:.6}", mean_attention);
-
-        let top_k = attention.top_k_landmarks(3);
-        println!("  Top 3 landmark connections:");
-        for (i, j, weight) in top_k {
-            println!("    Landmark {} -> {}: {:.4}", i, j, weight);
+        // Guard against division by zero
+        let divisor = val_indices.len() * horizon;
+        if divisor > 0 {
+            val_loss /= divisor as f64;
+            println!("Validation Loss: {:.6}", val_loss);
         }
-    }
 
-    // Test prediction
-    println!("\nSample predictions vs targets (first 5 samples, first horizon step):");
-    for b in 0..5.min(predictions.dim().0) {
-        println!(
-            "  Sample {}: Predicted={:+.4}, Actual={:+.4}",
-            b,
-            predictions[[b, 0]],
-            y_val[[b, 0]]
-        );
+        // Show attention statistics
+        if let Some(ref lw) = attention.landmark_weights {
+            let mean_attention: f64 = if lw.is_empty() {
+                0.0
+            } else {
+                lw.iter().sum::<f64>() / lw.len() as f64
+            };
+            println!("\nAttention Statistics:");
+            println!("  Mean landmark attention: {:.6}", mean_attention);
+
+            let top_k = attention.top_k_landmarks(3);
+            println!("  Top 3 landmark connections:");
+            for (i, j, weight) in top_k {
+                println!("    Landmark {} -> {}: {:.4}", i, j, weight);
+            }
+        }
+
+        // Test prediction
+        println!("\nSample predictions vs targets (first 5 samples, first horizon step):");
+        for b in 0..5.min(predictions.dim().0) {
+            println!(
+                "  Sample {}: Predicted={:+.4}, Actual={:+.4}",
+                b,
+                predictions[[b, 0]],
+                y_val[[b, 0]]
+            );
+        }
     }
 
     println!("\n=== Training Example Complete ===");

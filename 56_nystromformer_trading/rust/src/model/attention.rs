@@ -110,7 +110,15 @@ pub struct NystromAttention {
 
 impl NystromAttention {
     /// Creates a new Nyström Attention layer
+    ///
+    /// # Panics
+    /// Panics if the config is invalid (e.g., num_landmarks == 0, seq_len % num_landmarks != 0)
     pub fn new(config: &NystromformerConfig) -> Self {
+        // Validate config to ensure segment_size computation won't divide by zero
+        config
+            .validate()
+            .expect("Invalid NystromformerConfig for NystromAttention");
+
         let d_model = config.d_model;
         let num_heads = config.n_heads;
         let head_dim = config.head_dim();

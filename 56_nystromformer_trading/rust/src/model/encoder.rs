@@ -451,19 +451,27 @@ impl NystromformerModel {
         &self.config
     }
 
-    /// Returns total number of parameters
+    /// Returns total number of trainable parameters
+    ///
+    /// Note: pos_encoding is a fixed sinusoidal encoding and is NOT included
+    /// in this count as it is not trainable.
     pub fn num_parameters(&self) -> usize {
         let input_params = self.input_proj.len();
-        let pos_params = self.pos_encoding.len();
+        // Note: pos_encoding is fixed (sinusoidal), not trainable - excluded from count
+        let d_model = self.config.d_model;
+        let d_ff = d_model * self.config.ffn_multiplier;
+
         let layer_params = self.layers.len()
-            * (self.config.d_model * self.config.d_model * 4 // attention QKVO
-            + self.config.d_model * self.config.d_model * self.config.ffn_multiplier * 2 // FFN
-            + self.config.d_model * 4); // layer norm
+            * (d_model * d_model * 4 // attention QKVO weights
+            + d_model * d_ff + d_ff * d_model // FFN weights (w1 and w2)
+            + d_ff + d_model // FFN biases (ffn_b1 and ffn_b2)
+            + d_model * 4); // layer norm (ln1_gamma, ln1_beta, ln2_gamma, ln2_beta)
+
         let output_params = self.output_proj_reg.len()
             + self.output_proj_cls.len()
             + self.output_proj_alloc.len();
 
-        input_params + pos_params + layer_params + output_params
+        input_params + layer_params + output_params
     }
 }
 

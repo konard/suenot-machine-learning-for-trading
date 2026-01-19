@@ -249,10 +249,12 @@ impl NystromBacktester {
             }
 
             // Update equity with mark-to-market
+            // Note: current_position already includes max_position_size scaling (from position_size assignment)
             let prev_equity = equity;
             if current_position != 0.0 {
                 let price_change = (next_price - price) / price;
-                let position_pnl = current_position * price_change * equity * self.config.max_position_size;
+                // Don't multiply by max_position_size again - it's already in current_position
+                let position_pnl = current_position * price_change * equity;
                 equity += position_pnl;
             }
 
@@ -290,6 +292,8 @@ impl NystromBacktester {
     }
 
     /// Closes a position and returns the trade return
+    ///
+    /// Note: position already includes max_position_size scaling, so we don't multiply again
     fn close_position(
         &self,
         equity: &mut f64,
@@ -304,7 +308,8 @@ impl NystromBacktester {
         };
 
         let net_return = gross_return - self.config.transaction_cost - self.config.slippage;
-        let pnl = position.abs() * net_return * *equity * self.config.max_position_size;
+        // position.abs() already includes max_position_size, don't multiply again
+        let pnl = position.abs() * net_return * *equity;
         *equity += pnl;
 
         net_return
@@ -321,6 +326,26 @@ impl NystromBacktester {
         trade_returns: Vec<f64>,
     ) -> BacktestResult {
         let n = returns.len();
+
+        // Guard against empty returns to avoid NaN/division by zero
+        if n == 0 {
+            return BacktestResult {
+                equity_curve,
+                returns,
+                positions,
+                num_trades,
+                win_rate: 0.0,
+                total_return: 0.0,
+                annualized_return: 0.0,
+                sharpe_ratio: 0.0,
+                sortino_ratio: 0.0,
+                max_drawdown: 0.0,
+                calmar_ratio: 0.0,
+                avg_trade_return: 0.0,
+                profit_factor: 0.0,
+            };
+        }
+
         let periods_per_year = 252.0 * 24.0; // Assuming hourly data
 
         // Total and annualized return

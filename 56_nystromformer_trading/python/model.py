@@ -176,12 +176,13 @@ class NystromAttention(nn.Module):
         """
         batch, seq_len, _ = x.shape
 
-        # Handle variable sequence lengths by padding
+        # Validate sequence length - require exact match to avoid silent errors
+        # with padding and last-token selection
         if seq_len != self.seq_len:
-            pad_len = self.seq_len - seq_len
-            if pad_len > 0:
-                x = F.pad(x, (0, 0, 0, pad_len), value=0)
-                seq_len = self.seq_len
+            raise ValueError(
+                f"Expected seq_len={self.seq_len}, got {seq_len}. "
+                "Pad/trim inputs (and mask) before calling attention."
+            )
 
         # Project to Q, K, V
         Q = self.q_proj(x)
@@ -442,6 +443,14 @@ class NystromformerTrading(nn.Module):
             attentions: Optional list of attention weights from each layer
         """
         batch, seq_len, _ = x.shape
+
+        # Validate sequence length - require exact match to avoid silent errors
+        # with positional encoding and landmark reshaping
+        if seq_len != self.seq_len:
+            raise ValueError(
+                f"Expected seq_len={self.seq_len}, got {seq_len}. "
+                "Pad/trim inputs before calling the model."
+            )
 
         # Project input
         x = self.input_proj(x)

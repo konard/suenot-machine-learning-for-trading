@@ -149,7 +149,16 @@ impl OrderBook {
     }
 
     /// Calculates volume-weighted average price for given quantity
+    ///
+    /// Returns None if:
+    /// - target_qty is zero or negative
+    /// - there is insufficient depth to fill the order
     pub fn vwap_bid(&self, target_qty: f64) -> Option<f64> {
+        // Guard against invalid target quantity
+        if target_qty <= 0.0 {
+            return None;
+        }
+
         let mut remaining = target_qty;
         let mut total_value = 0.0;
         let mut total_qty = 0.0;
@@ -165,6 +174,11 @@ impl OrderBook {
             }
         }
 
+        // Return None if insufficient depth (couldn't fill the order)
+        if remaining > 0.0 {
+            return None;
+        }
+
         if total_qty > 0.0 {
             Some(total_value / total_qty)
         } else {
@@ -173,7 +187,16 @@ impl OrderBook {
     }
 
     /// Calculates volume-weighted average price for given quantity (asks)
+    ///
+    /// Returns None if:
+    /// - target_qty is zero or negative
+    /// - there is insufficient depth to fill the order
     pub fn vwap_ask(&self, target_qty: f64) -> Option<f64> {
+        // Guard against invalid target quantity
+        if target_qty <= 0.0 {
+            return None;
+        }
+
         let mut remaining = target_qty;
         let mut total_value = 0.0;
         let mut total_qty = 0.0;
@@ -187,6 +210,11 @@ impl OrderBook {
             if remaining <= 0.0 {
                 break;
             }
+        }
+
+        // Return None if insufficient depth (couldn't fill the order)
+        if remaining > 0.0 {
+            return None;
         }
 
         if total_qty > 0.0 {

@@ -104,6 +104,11 @@ impl NystromformerConfig {
             ));
         }
 
+        // num_landmarks must be positive to avoid divide-by-zero in segment_size
+        if self.num_landmarks == 0 {
+            return Err("num_landmarks must be greater than 0".to_string());
+        }
+
         if self.num_landmarks > self.seq_len {
             return Err(format!(
                 "num_landmarks ({}) cannot exceed seq_len ({})",

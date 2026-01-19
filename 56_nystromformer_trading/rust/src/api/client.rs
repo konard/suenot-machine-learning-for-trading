@@ -1,6 +1,7 @@
 //! Bybit API client for fetching market data
 
 use reqwest::Client;
+use std::time::Duration;
 use thiserror::Error;
 
 use crate::api::types::*;
@@ -35,18 +36,29 @@ impl Default for BybitClient {
 }
 
 impl BybitClient {
-    /// Creates a new Bybit client
+    /// Default request timeout in seconds
+    const DEFAULT_TIMEOUT_SECS: u64 = 10;
+
+    /// Creates a new Bybit client with default timeout
     pub fn new() -> Self {
+        let client = Client::builder()
+            .timeout(Duration::from_secs(Self::DEFAULT_TIMEOUT_SECS))
+            .build()
+            .expect("Failed to build reqwest client");
         Self {
-            client: Client::new(),
+            client,
             base_url: "https://api.bybit.com".to_string(),
         }
     }
 
     /// Creates a client with custom base URL (for testnet)
     pub fn with_base_url(base_url: &str) -> Self {
+        let client = Client::builder()
+            .timeout(Duration::from_secs(Self::DEFAULT_TIMEOUT_SECS))
+            .build()
+            .expect("Failed to build reqwest client");
         Self {
-            client: Client::new(),
+            client,
             base_url: base_url.to_string(),
         }
     }
@@ -87,12 +99,13 @@ impl BybitClient {
             });
         }
 
+        // Parse klines, propagating errors instead of silently dropping them
         let mut klines: Vec<Kline> = response
             .result
             .list
             .into_iter()
-            .filter_map(|row| self.parse_kline(&row).ok())
-            .collect();
+            .map(|row| self.parse_kline(&row))
+            .collect::<Result<_, _>>()?;
 
         // Sort by time ascending
         klines.sort_by_key(|k| k.open_time);
@@ -141,12 +154,13 @@ impl BybitClient {
                 });
             }
 
+            // Parse klines, propagating errors instead of silently dropping them
             let klines: Vec<Kline> = response
                 .result
                 .list
                 .into_iter()
-                .filter_map(|row| self.parse_kline(&row).ok())
-                .collect();
+                .map(|row| self.parse_kline(&row))
+                .collect::<Result<_, _>>()?;
 
             if klines.is_empty() {
                 break;
@@ -189,11 +203,23 @@ impl BybitClient {
         let data = response.result.list.into_iter().next()
             .ok_or_else(|| BybitError::ParseError("No ticker data".to_string()))?;
 
+        // Parse last price and percentage change
+        let last_price: f64 = data.last_price.parse().unwrap_or(0.0);
+        let pct: f64 = data.price_24h_pcnt.parse().unwrap_or(0.0); // decimal (e.g., 0.05 == 5%)
+
+        // Calculate absolute price change from last_price and percentage
+        // If current = previous * (1 + pct), then change = current - previous = current * pct / (1 + pct)
+        let price_change_24h = if (1.0_f64 + pct).abs() > f64::EPSILON {
+            last_price * pct / (1.0 + pct)
+        } else {
+            0.0
+        };
+
         Ok(Ticker {
             symbol: data.symbol,
-            last_price: data.last_price.parse().unwrap_or(0.0),
-            price_change_24h: 0.0, // Calculate from percentage
-            price_change_pct_24h: data.price_24h_pcnt.parse().unwrap_or(0.0) * 100.0,
+            last_price,
+            price_change_24h,
+            price_change_pct_24h: pct * 100.0,
             high_24h: data.high_price_24h.parse().unwrap_or(0.0),
             low_24h: data.low_price_24h.parse().unwrap_or(0.0),
             volume_24h: data.volume_24h.parse().unwrap_or(0.0),
