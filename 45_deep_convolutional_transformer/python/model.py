@@ -68,6 +68,14 @@ class DCTConfig:
         assert self.d_model % self.num_heads == 0, "d_model must be divisible by num_heads"
         assert self.dropout >= 0 and self.dropout <= 1, "dropout must be in [0, 1]"
         assert len(self.kernel_sizes) >= 2, "Need at least 2 kernel sizes"
+        num_branches = len(self.kernel_sizes) + 1
+        assert self.inception_channels % num_branches == 0, (
+            f"inception_channels ({self.inception_channels}) must be divisible by "
+            f"number of branches ({num_branches})"
+        )
+        assert self.inception_channels // num_branches > 0, (
+            "inception_channels too small for branch split"
+        )
 
     @property
     def head_dim(self) -> int:
@@ -253,7 +261,8 @@ class SeparableFFN(nn.Module):
 
         # Depthwise-style processing (groups=d_model would be true depthwise)
         # Using smaller groups for efficiency
-        groups = min(config.d_model, 8)
+        # Use gcd to ensure d_model is divisible by groups for any d_model value
+        groups = math.gcd(config.d_model, 8) or 1
         self.depthwise = nn.Conv1d(
             config.d_model, config.d_model,
             kernel_size=3, padding=1, groups=groups

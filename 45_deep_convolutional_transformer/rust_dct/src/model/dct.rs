@@ -165,16 +165,18 @@ fn softmax(x: &[f64]) -> Vec<f64> {
     exp_vals.iter().map(|&v| v / sum).collect()
 }
 
-/// Random matrix initialization
+/// Random matrix initialization using Box-Muller transform
 fn random_matrix(rows: usize, cols: usize, scale: f64) -> Array2<f64> {
     use std::sync::atomic::{AtomicU64, Ordering};
     static SEED: AtomicU64 = AtomicU64::new(99999);
 
     Array2::from_shape_fn((rows, cols), |_| {
-        let s = SEED.fetch_add(1, Ordering::Relaxed);
-        let u1 = ((s.wrapping_mul(1103515245).wrapping_add(12345) % (1 << 31)) as f64)
+        // Use two independent seed values for proper Box-Muller transform
+        let s1 = SEED.fetch_add(1, Ordering::Relaxed);
+        let s2 = SEED.fetch_add(1, Ordering::Relaxed);
+        let u1 = ((s1.wrapping_mul(1103515245).wrapping_add(12345) % (1 << 31)) as f64)
             / (1u64 << 31) as f64;
-        let u2 = ((s.wrapping_mul(1103515245).wrapping_add(54321) % (1 << 31)) as f64)
+        let u2 = ((s2.wrapping_mul(1103515245).wrapping_add(12345) % (1 << 31)) as f64)
             / (1u64 << 31) as f64;
 
         let u1 = u1.max(1e-10);

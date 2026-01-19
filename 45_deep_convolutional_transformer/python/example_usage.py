@@ -8,6 +8,7 @@ This script demonstrates:
 4. Running backtests and evaluating performance
 """
 
+import copy
 import numpy as np
 import pandas as pd
 import torch
@@ -124,7 +125,7 @@ def train_model(
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             patience_counter = 0
-            best_state = model.state_dict().copy()
+            best_state = copy.deepcopy(model.state_dict())
         else:
             patience_counter += 1
             if patience_counter >= patience:

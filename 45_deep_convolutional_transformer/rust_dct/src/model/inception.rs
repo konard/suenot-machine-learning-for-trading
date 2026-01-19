@@ -20,6 +20,15 @@ pub struct InceptionEmbedding {
 impl InceptionEmbedding {
     /// Create new inception embedding
     pub fn new(input_features: usize, d_model: usize) -> Self {
+        assert!(
+            d_model % 4 == 0,
+            "d_model must be divisible by 4 for the inception branches"
+        );
+        assert!(
+            d_model / 4 > 0,
+            "d_model must be at least 4 for inception branches"
+        );
+
         let kernel_sizes = vec![1, 3, 5];
         let channels_per_branch = d_model / 4; // Each branch produces 1/4 of channels
 
@@ -95,15 +104,16 @@ impl InceptionEmbedding {
     }
 }
 
-/// Simple pseudo-random normal distribution
+/// Simple pseudo-random normal distribution using Box-Muller transform
 fn rand_normal() -> f64 {
-    // Box-Muller transform using a simple PRNG
     use std::sync::atomic::{AtomicU64, Ordering};
     static SEED: AtomicU64 = AtomicU64::new(12345);
 
-    let s = SEED.fetch_add(1, Ordering::Relaxed);
-    let u1 = ((s.wrapping_mul(1103515245).wrapping_add(12345) % (1 << 31)) as f64) / (1u64 << 31) as f64;
-    let u2 = ((s.wrapping_mul(1103515245).wrapping_add(54321) % (1 << 31)) as f64) / (1u64 << 31) as f64;
+    // Use two independent seed values for proper Box-Muller transform
+    let s1 = SEED.fetch_add(1, Ordering::Relaxed);
+    let s2 = SEED.fetch_add(1, Ordering::Relaxed);
+    let u1 = ((s1.wrapping_mul(1103515245).wrapping_add(12345) % (1 << 31)) as f64) / (1u64 << 31) as f64;
+    let u2 = ((s2.wrapping_mul(1103515245).wrapping_add(12345) % (1 << 31)) as f64) / (1u64 << 31) as f64;
 
     let u1 = u1.max(1e-10);
     (-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos()

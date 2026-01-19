@@ -218,7 +218,8 @@ impl Backtester {
                     }
                     Signal::Short => {
                         position = -((position_value - cost) / price);
-                        capital += position_value - 2.0 * cost;
+                        // Capital is tied up for short positions same as long
+                        capital -= position_value;
                     }
                     Signal::Hold => {}
                 }

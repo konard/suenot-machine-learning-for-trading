@@ -65,16 +65,25 @@ fn create_sequences(
                 x[[i, j, k]] = features[[i + j, k]];
             }
         }
-        // Label is at the end of lookback window
-        y.push(labels[i + lookback - 1]);
+        // Label is at the prediction horizon after the lookback window
+        // This ensures we predict future movement, not current movement
+        y.push(labels[i + lookback + horizon - 1]);
     }
 
     (x, y)
 }
 
-/// Z-score normalization along axis 0
-fn normalize_features(data: &mut Array3<f64>) {
+/// Normalization statistics for each feature
+struct NormStats {
+    means: Vec<f64>,
+    stds: Vec<f64>,
+}
+
+/// Compute normalization statistics from training data only
+fn compute_norm_stats(data: &Array3<f64>) -> NormStats {
     let shape = data.dim();
+    let mut means = Vec::with_capacity(shape.2);
+    let mut stds = Vec::with_capacity(shape.2);
 
     for k in 0..shape.2 {
         // Compute mean and std for each feature across all samples and time steps
@@ -111,7 +120,21 @@ fn normalize_features(data: &mut Array3<f64>) {
 
         let std = if std < 1e-8 { 1.0 } else { std };
 
-        // Apply normalization
+        means.push(mean);
+        stds.push(std);
+    }
+
+    NormStats { means, stds }
+}
+
+/// Apply normalization using pre-computed statistics
+fn apply_normalization(data: &mut Array3<f64>, stats: &NormStats) {
+    let shape = data.dim();
+
+    for k in 0..shape.2 {
+        let mean = stats.means[k];
+        let std = stats.stds[k];
+
         for i in 0..shape.0 {
             for j in 0..shape.1 {
                 let val = data[[i, j, k]];
@@ -137,28 +160,33 @@ pub fn prepare_dataset(ohlcv: &OHLCV, config: &DatasetConfig) -> Option<Prepared
     let labels = create_movement_labels(&ohlcv.close, config.threshold, config.horizon);
 
     // Create sequences
-    let (mut x, y) = create_sequences(&features, labels.as_slice().unwrap(), config.lookback, config.horizon);
+    let (x, y) = create_sequences(&features, labels.as_slice().unwrap(), config.lookback, config.horizon);
 
     if x.dim().0 == 0 {
         return None;
     }
 
-    // Normalize features
-    normalize_features(&mut x);
-
-    // Split into train/val/test
+    // Split into train/val/test BEFORE normalization to avoid data leakage
     let n = x.dim().0;
     let train_end = (n as f64 * config.train_ratio) as usize;
     let val_end = (n as f64 * (config.train_ratio + config.val_ratio)) as usize;
 
-    let x_train = x.slice(ndarray::s![0..train_end, .., ..]).to_owned();
+    let mut x_train = x.slice(ndarray::s![0..train_end, .., ..]).to_owned();
     let y_train = y[0..train_end].to_vec();
 
-    let x_val = x.slice(ndarray::s![train_end..val_end, .., ..]).to_owned();
+    let mut x_val = x.slice(ndarray::s![train_end..val_end, .., ..]).to_owned();
     let y_val = y[train_end..val_end].to_vec();
 
-    let x_test = x.slice(ndarray::s![val_end.., .., ..]).to_owned();
+    let mut x_test = x.slice(ndarray::s![val_end.., .., ..]).to_owned();
     let y_test = y[val_end..].to_vec();
+
+    // Compute normalization stats from training data only (prevents data leakage)
+    let norm_stats = compute_norm_stats(&x_train);
+
+    // Apply normalization to all splits using training stats
+    apply_normalization(&mut x_train, &norm_stats);
+    apply_normalization(&mut x_val, &norm_stats);
+    apply_normalization(&mut x_test, &norm_stats);
 
     let feature_names = vec![
         "log_returns".to_string(),

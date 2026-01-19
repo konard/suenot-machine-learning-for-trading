@@ -441,7 +441,7 @@ def create_sequences(data, lookback=30, horizon=1):
 ### 01: Data Preparation
 
 ```python
-# python/01_data_preparation.py
+# Example data preparation (see python/data.py for full implementation)
 
 import pandas as pd
 import numpy as np
@@ -555,7 +555,7 @@ See [python/model.py](python/model.py) for complete implementation.
 ### 03: Training Pipeline
 
 ```python
-# python/03_training.py
+# Example training pipeline (see python/example_usage.py for full implementation)
 
 import torch
 import torch.nn as nn
@@ -648,7 +648,7 @@ def train_model(
 ### 04: Stock Movement Prediction
 
 ```python
-# python/04_prediction.py
+# Example prediction (see python/model.py for predict_movement method)
 
 import torch
 import numpy as np
@@ -864,9 +864,8 @@ rust_dct/
 │       ├── signals.rs      # Signal generation
 │       └── backtest.rs     # Backtesting engine
 └── examples/
-    ├── fetch_data.rs       # Download Bybit data
-    ├── train.rs            # Train model
-    └── backtest.rs         # Run backtest
+    ├── demo.rs             # Complete usage demonstration
+    └── fetch_bybit.rs      # Download Bybit data
 ```
 
 ### Quick Start (Rust)
@@ -876,13 +875,10 @@ rust_dct/
 cd rust_dct
 
 # Fetch data from Bybit
-cargo run --example fetch_data -- --symbols BTCUSDT,ETHUSDT,SOLUSDT
+cargo run --example fetch_bybit
 
-# Train model
-cargo run --example train -- --epochs 100 --batch-size 32
-
-# Run backtest
-cargo run --example backtest -- --start 2024-01-01 --end 2024-12-31
+# Run complete demo (model creation, data processing, backtest)
+cargo run --example demo
 ```
 
 ## Python Implementation
@@ -892,34 +888,27 @@ See [python/](python/) for Python implementation.
 ```
 python/
 ├── model.py                # Main DCT model implementation
-├── data_loader.py          # Data loading (yfinance, Bybit)
-├── features.py             # Feature engineering
-├── train.py                # Training script
-├── backtest.py             # Backtesting utilities
+├── data.py                 # Data loading (yfinance, Bybit) and feature engineering
+├── strategy.py             # Trading strategy and backtesting utilities
+├── example_usage.py        # Complete usage demonstration
 ├── requirements.txt        # Dependencies
-└── examples/
-    ├── 01_data_preparation.py
-    ├── 02_model_architecture.py
-    ├── 03_training.py
-    ├── 04_prediction.py
-    └── 05_backtesting.py
+└── __init__.py             # Package exports
 ```
 
 ### Quick Start (Python)
 
 ```bash
 # Install dependencies
-pip install -r requirements.txt
+pip install -r python/requirements.txt
 
-# Fetch data
-python data_loader.py --symbols AAPL,MSFT,GOOGL --source yfinance
-python data_loader.py --symbols BTCUSDT,ETHUSDT --source bybit
+# Run complete example (crypto trading)
+python python/example_usage.py --mode crypto
 
-# Train model
-python train.py --config configs/default.yaml
+# Run stock trading example
+python python/example_usage.py --mode stock
 
-# Run backtest
-python backtest.py --model checkpoints/best_model.pt
+# Run both examples
+python python/example_usage.py --mode both
 ```
 
 ## Best Practices

@@ -140,6 +140,7 @@ class Backtester:
         position_size = 0
         entry_price = 0
         entry_idx = 0
+        entry_capital = 0  # Track capital at entry for accurate PnL
 
         trades: List[Trade] = []
         equity = [capital]
@@ -156,8 +157,8 @@ class Backtester:
 
                 # Stop loss
                 if self.config.stop_loss and returns < -self.config.stop_loss:
-                    # Exit position
-                    pnl = returns * position_size * capital
+                    # Exit position - use entry_capital for consistent PnL
+                    pnl = returns * position_size * entry_capital
                     cost = abs(position_size) * current_price * self.config.transaction_cost
                     capital += pnl - cost
 
@@ -176,7 +177,7 @@ class Backtester:
 
                 # Take profit
                 elif self.config.take_profit and returns > self.config.take_profit:
-                    pnl = returns * position_size * capital
+                    pnl = returns * position_size * entry_capital
                     cost = abs(position_size) * current_price * self.config.transaction_cost
                     capital += pnl - cost
 
@@ -200,6 +201,7 @@ class Backtester:
                 position_size = self.config.position_size
                 entry_price = current_price
                 entry_idx = i
+                entry_capital = capital  # Track capital at entry
 
                 # Entry cost
                 cost = position_size * current_price * self.config.transaction_cost
@@ -208,7 +210,7 @@ class Backtester:
             elif position != 0 and signal != position and signal != 0:
                 # Signal reversal - exit current and enter new
                 returns = (current_price - entry_price) / entry_price * position
-                pnl = returns * position_size * capital
+                pnl = returns * position_size * entry_capital
                 cost = abs(position_size) * current_price * self.config.transaction_cost
                 capital += pnl - cost
 
@@ -228,12 +230,13 @@ class Backtester:
                 position_size = self.config.position_size
                 entry_price = current_price
                 entry_idx = i
+                entry_capital = capital  # Track capital for new position
                 cost = position_size * current_price * self.config.transaction_cost
                 capital -= cost
 
             # Calculate current equity
             if position != 0:
-                unrealized_pnl = (current_price - entry_price) / entry_price * position * position_size * capital
+                unrealized_pnl = (current_price - entry_price) / entry_price * position * position_size * entry_capital
                 equity.append(capital + unrealized_pnl)
             else:
                 equity.append(capital)
@@ -248,7 +251,7 @@ class Backtester:
         if position != 0:
             current_price = prices.iloc[-1]
             returns = (current_price - entry_price) / entry_price * position
-            pnl = returns * position_size * capital
+            pnl = returns * position_size * entry_capital
             cost = abs(position_size) * current_price * self.config.transaction_cost
             capital += pnl - cost
 
@@ -263,8 +266,14 @@ class Backtester:
                 exit_reason='end_of_backtest'
             ))
 
-        equity_curve = pd.Series(equity, index=dates[:len(equity)])
-        daily_returns = pd.Series(daily_returns, index=dates[1:len(daily_returns)+1])
+        # Equity curve: starts with initial capital, then one value per day
+        # Align index properly - first value is initial capital at start
+        if len(equity) > len(dates):
+            # Trim equity to match dates (drop initial capital point)
+            equity_curve = pd.Series(equity[1:], index=dates)
+        else:
+            equity_curve = pd.Series(equity, index=dates[:len(equity)])
+        daily_returns = pd.Series(daily_returns, index=dates[:len(daily_returns)])
 
         metrics = self._calculate_metrics(trades, equity_curve, daily_returns)
 
