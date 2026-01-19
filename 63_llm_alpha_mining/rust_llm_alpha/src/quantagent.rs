@@ -4,7 +4,7 @@
 //! - Inner loop: Generate -> Evaluate -> Refine
 //! - Outer loop: Learn from experience via knowledge base
 
-use crate::alpha::{AlphaFactor, AlphaEvaluator, FactorMetrics, calculate_ic, predefined_factors};
+use crate::alpha::{AlphaFactor, AlphaEvaluator, calculate_ic, predefined_factors};
 use crate::data::MarketData;
 use crate::error::Result;
 use chrono::{DateTime, Utc};

@@ -52,7 +52,7 @@ async fn main() -> anyhow::Result<()> {
     println!("{}", "-".repeat(40));
 
     let returns = btc_data.returns();
-    let log_returns = btc_data.log_returns();
+    let _log_returns = btc_data.log_returns();
 
     if !returns.is_empty() {
         let mean_ret: f64 = returns.iter().sum::<f64>() / returns.len() as f64;

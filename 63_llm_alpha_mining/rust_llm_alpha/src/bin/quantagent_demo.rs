@@ -3,7 +3,7 @@
 //! Demonstrates the self-improving alpha mining agent.
 
 use llm_alpha_mining::data::generate_synthetic_data;
-use llm_alpha_mining::quantagent::{QuantAgent, KnowledgeBase, MarketCondition, Experience};
+use llm_alpha_mining::quantagent::{QuantAgent, MarketCondition, Experience};
 use std::collections::HashMap;
 
 fn main() -> anyhow::Result<()> {
