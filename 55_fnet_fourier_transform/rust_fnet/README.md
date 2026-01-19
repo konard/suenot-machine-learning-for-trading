@@ -169,9 +169,9 @@ src/
     └── backtest.rs     # Backtesting engine
 ```
 
-## Features
+## Trading Features
 
-### Trading Features (8 dimensions)
+### Feature Dimensions (8 dimensions)
 
 | Feature | Description |
 |---------|-------------|

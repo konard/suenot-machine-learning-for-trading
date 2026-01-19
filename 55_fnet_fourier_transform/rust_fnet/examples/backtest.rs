@@ -54,7 +54,7 @@ fn main() -> Result<()> {
     // Get data
     let (features, prices, timestamps) = if args.synthetic {
         println!("Using synthetic data for demonstration...");
-        generate_synthetic_data(2000)
+        generate_synthetic_data(args.limit)
     } else {
         println!("Fetching data from Bybit...");
         fetch_real_data(&args.symbol, &args.interval, args.limit)?
