@@ -1,0 +1,23 @@
+# Prompt Engineering for Trading - Python Dependencies
+
+# Core dependencies
+numpy>=1.21.0
+pandas>=1.3.0
+
+# HTTP client for LLM APIs
+aiohttp>=3.9.2
+httpx>=0.24.0
+
+# Data processing
+python-dateutil>=2.8.0
+
+# Market data (optional)
+yfinance>=0.2.0
+ccxt>=4.0.0  # For Bybit and other crypto exchanges
+
+# Visualization (optional)
+matplotlib>=3.5.0
+
+# Development
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
