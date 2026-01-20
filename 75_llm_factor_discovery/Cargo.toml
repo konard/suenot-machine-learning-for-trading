@@ -1,0 +1,120 @@
+[package]
+name = "llm_factor_discovery"
+version = "0.1.0"
+edition = "2021"
+authors = ["Machine Learning for Trading"]
+description = "LLM-based alpha factor discovery and generation for quantitative trading"
+license = "MIT"
+repository = "https://github.com/suenot/machine-learning-for-trading"
+keywords = ["trading", "llm", "factor", "alpha", "cryptocurrency", "bybit"]
+categories = ["finance", "science"]
+
+[lib]
+name = "llm_factor_discovery"
+path = "src/lib.rs"
+
+[[example]]
+name = "basic_factor_discovery"
+path = "examples/basic_factor_discovery.rs"
+
+[[example]]
+name = "backtest_factors"
+path = "examples/backtest_factors.rs"
+
+[[example]]
+name = "live_factor_trading"
+path = "examples/live_factor_trading.rs"
+
+[[example]]
+name = "crypto_factors"
+path = "examples/crypto_factors.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# HTTP client for APIs
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Date/time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Async traits
+async-trait = "0.1"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# UUID for unique identifiers
+uuid = { version = "1.6", features = ["v4", "serde"] }
+
+# Environment variables
+dotenvy = "0.15"
+
+# Caching
+lru = "0.12"
+
+# Statistics and math
+statrs = "0.16"
+ndarray = "0.15"
+
+# Configuration
+config = "0.14"
+toml = "0.8"
+serde_yaml = "0.9"
+
+# Rate limiting
+governor = "0.6"
+
+# Hashing for deduplication
+sha2 = "0.10"
+hex = "0.4"
+
+# Regex for text processing
+regex = "1.10"
+
+# Expression parsing
+pest = "2.7"
+pest_derive = "2.7"
+
+# Ordered floats for factor calculations
+ordered-float = "4.2"
+
+[dev-dependencies]
+tokio-test = "0.4"
+mockall = "0.12"
+criterion = "0.5"
+tempfile = "3.9"
+approx = "0.5"
+
+[features]
+default = []
+openai = []
+anthropic = []
+local-llm = []
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+[[example]]
+name = "test_parser"
+path = "experiments/test_parser.rs"
+
+[[example]]
+name = "test_ic_calculation"
+path = "experiments/test_ic_calculation.rs"
