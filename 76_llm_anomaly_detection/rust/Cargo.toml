@@ -1,0 +1,45 @@
+[package]
+name = "llm_anomaly_detection"
+version = "0.1.0"
+edition = "2021"
+description = "LLM-based anomaly detection for financial data"
+license = "MIT"
+repository = "https://github.com/suenot/machine-learning-for-trading"
+
+[dependencies]
+# Core
+tokio = { version = "1.35", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+anyhow = "1.0"
+
+# HTTP client
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+
+# Numerics
+ndarray = "0.15"
+ndarray-stats = "0.5"
+statrs = "0.16"
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
+
+[[example]]
+name = "basic_detection"
+path = "examples/basic_detection.rs"
+
+[[example]]
+name = "bybit_monitor"
+path = "examples/bybit_monitor.rs"
+
+[[example]]
+name = "backtest"
+path = "examples/backtest.rs"
