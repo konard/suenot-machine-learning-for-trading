@@ -1,0 +1,74 @@
+[package]
+name = "llm-portfolio-construction"
+version = "0.1.0"
+edition = "2021"
+authors = ["ML Trading Examples"]
+description = "LLM-based portfolio construction for cryptocurrency and stock trading using Rust"
+readme = "README.md"
+license = "MIT"
+keywords = ["llm", "portfolio", "cryptocurrency", "trading", "machine-learning"]
+
+[dependencies]
+# HTTP client for API requests
+reqwest = { version = "0.12", features = ["json", "blocking"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging
+log = "0.4"
+env_logger = "0.11"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# Math and arrays
+ndarray = { version = "0.16", features = ["serde"] }
+ndarray-rand = "0.15"
+
+# Random number generation
+rand = "0.8"
+rand_distr = "0.4"
+
+# CSV handling
+csv = "1.3"
+
+# Progress bars
+indicatif = "0.17"
+
+# Model serialization
+bincode = "1.3"
+
+# CLI
+clap = { version = "4.5", features = ["derive"] }
+
+# Statistics
+statrs = "0.17"
+
+# Parallel processing
+rayon = "1.10"
+
+# UUID for request tracking
+uuid = { version = "1.0", features = ["v4"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
+approx = "0.5"
+
+[[example]]
+name = "crypto_portfolio"
+path = "examples/crypto_portfolio.rs"
+
+[[example]]
+name = "stock_portfolio"
+path = "examples/stock_portfolio.rs"
