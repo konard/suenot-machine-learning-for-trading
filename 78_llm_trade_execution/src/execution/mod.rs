@@ -12,8 +12,8 @@ mod state_machine;
 mod types;
 
 pub use engine::{ExecutionConfig, ExecutionEngine, ExecutionError, ExecutionResult};
-pub use llm_adapter::{LlmAdapter, LlmConfig, LlmDecision, LlmError};
-pub use state_machine::{ExecutionState, StateTransition};
+pub use llm_adapter::{build_execution_context, ExecutionAction, ExecutionContext, LlmAdapter, LlmConfig, LlmDecision, LlmError, MarketState};
+pub use state_machine::{ExecutionState, ExecutionStateMachine, StateTransition};
 pub use types::{
     ChildOrder, ChildOrderStatus, OrderId, ParentOrder, ParentOrderStatus, Side,
 };

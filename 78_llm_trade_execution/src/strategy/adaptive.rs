@@ -3,7 +3,7 @@
 use crate::data::OrderBook;
 use crate::execution::{
     ExecutionAction, ExecutionContext, ExecutionError, LlmAdapter, LlmDecision,
-    MarketState, ParentOrder, Side,
+    ParentOrder, Side,
 };
 use crate::strategy::{calculate_limit_price, ExecutionSlice, ExecutionStrategy, StrategyConfig};
 use std::sync::Arc;
@@ -254,7 +254,7 @@ impl LlmStrategy {
     }
 
     /// Build execution context from order
-    fn build_context(&self, order: &ParentOrder, orderbook: &OrderBook) -> ExecutionContext {
+    fn build_context(&self, order: &ParentOrder, _orderbook: &OrderBook) -> ExecutionContext {
         ExecutionContext {
             side: order.side,
             total_quantity: order.total_quantity,

@@ -1,6 +1,6 @@
 //! Execution engine for managing order lifecycle.
 
-use crate::data::{BybitClient, OrderBook};
+use crate::data::OrderBook;
 use crate::execution::{
     ChildOrder, ExecutionState, ExecutionStateMachine, LlmAdapter, LlmDecision, LlmError,
     OrderId, ParentOrder, ParentOrderStatus, Side, StateTransition,
@@ -11,8 +11,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
-use tokio::sync::mpsc;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 
 /// Execution-related errors
 #[derive(Error, Debug)]
@@ -295,14 +294,25 @@ impl ExecutionEngine {
 
         // Main execution loop
         let mut slice_count = 0u32;
-        let mut total_volume = 0.0f64;
+        let mut _total_volume = 0.0f64;
         let max_slices = 1000u32; // Safety limit
 
         while !self.state_machine.is_terminal() && slice_count < max_slices {
-            let parent = self.parent_orders.get(&order_id).unwrap();
+            // Extract needed data from parent order first to avoid borrow issues
+            let (remaining_qty, time_expired, symbol, parent_side, _parent_urgency, parent_clone) = {
+                let parent = self.parent_orders.get(&order_id).unwrap();
+                (
+                    parent.remaining_quantity(),
+                    parent.is_time_expired(),
+                    parent.symbol.clone(),
+                    parent.side,
+                    parent.urgency,
+                    parent.clone(),
+                )
+            };
 
             // Check if order is complete
-            if parent.remaining_quantity() <= 0.0 {
+            if remaining_qty <= 0.0 {
                 self.state_machine
                     .transition(ExecutionState::Completing, "Order filled")
                     .map_err(|e| ExecutionError::StateTransition(e))?;
@@ -310,7 +320,7 @@ impl ExecutionEngine {
             }
 
             // Check if time expired
-            if parent.is_time_expired() {
+            if time_expired {
                 self.state_machine
                     .transition(ExecutionState::Completing, "Time expired")
                     .map_err(|e| ExecutionError::StateTransition(e))?;
@@ -318,11 +328,11 @@ impl ExecutionEngine {
             }
 
             // Get market data
-            let orderbook = self.get_orderbook(&parent.symbol).await?;
+            let orderbook = self.get_orderbook(&symbol).await?;
 
             // Get LLM decision if enabled
             let llm_decision = if self.config.use_llm {
-                self.get_llm_decision(parent, &orderbook).await.ok()
+                self.get_llm_decision(&parent_clone, &orderbook).await.ok()
             } else {
                 None
             };
@@ -357,14 +367,14 @@ impl ExecutionEngine {
             }
 
             // Calculate slice parameters
-            let slice = strategy.next_slice(parent, &orderbook)?;
+            let slice = strategy.next_slice(&parent_clone, &orderbook)?;
 
             if slice.quantity > 0.0 {
                 // Create child order
                 let child = ChildOrder::new(
                     order_id.clone(),
-                    parent.symbol.clone(),
-                    parent.side,
+                    symbol.clone(),
+                    parent_side,
                     slice.quantity,
                     slice.limit_price,
                 )
@@ -374,8 +384,8 @@ impl ExecutionEngine {
                 let fill_price = self.simulate_fill(&child, &orderbook)?;
 
                 // Record the fill
-                if let Some(parent) = self.parent_orders.get_mut(&order_id) {
-                    parent.record_fill(child.quantity, fill_price);
+                if let Some(parent_mut) = self.parent_orders.get_mut(&order_id) {
+                    parent_mut.record_fill(child.quantity, fill_price);
                 }
 
                 // Store child order
@@ -385,7 +395,7 @@ impl ExecutionEngine {
                     children.push(filled_child);
                 }
 
-                total_volume += slice.quantity;
+                _total_volume += slice.quantity;
                 slice_count += 1;
 
                 if self.config.verbose {

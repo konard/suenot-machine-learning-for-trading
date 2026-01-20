@@ -35,23 +35,25 @@ impl ImplementationShortfallStrategy {
 
     /// Create with custom model parameters
     pub fn with_params(params: AlmgrenChrissParams) -> Self {
+        let risk_aversion = params.lambda;
         Self {
             config: StrategyConfig::default(),
             model: AlmgrenChrissModel::new(params),
             trajectory: None,
             current_step: 0,
-            risk_aversion: params.lambda,
+            risk_aversion,
         }
     }
 
     /// Create with custom configuration
     pub fn with_config(config: StrategyConfig, params: AlmgrenChrissParams) -> Self {
+        let risk_aversion = params.lambda;
         Self {
             config,
             model: AlmgrenChrissModel::new(params),
             trajectory: None,
             current_step: 0,
-            risk_aversion: params.lambda,
+            risk_aversion,
         }
     }
 

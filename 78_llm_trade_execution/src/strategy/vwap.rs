@@ -1,7 +1,7 @@
 //! VWAP (Volume-Weighted Average Price) execution strategy.
 
 use crate::data::OrderBook;
-use crate::execution::{ExecutionError, ParentOrder, Side};
+use crate::execution::{ExecutionError, ParentOrder};
 use crate::strategy::{calculate_limit_price, ExecutionSlice, ExecutionStrategy, StrategyConfig};
 
 /// Intraday volume profile

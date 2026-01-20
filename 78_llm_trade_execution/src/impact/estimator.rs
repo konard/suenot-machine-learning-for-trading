@@ -241,7 +241,7 @@ impl MarketImpactEstimator {
         orderbook: &OrderBook,
         is_buy: bool,
     ) -> Option<ImpactComponent> {
-        let (avg_price, price_impact) = if is_buy {
+        let (avg_price, _price_impact) = if is_buy {
             orderbook.buy_impact(quantity)?
         } else {
             orderbook.sell_impact(quantity)?
