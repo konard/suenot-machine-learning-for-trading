@@ -8,7 +8,7 @@
 //! Note: For actual trading, you need valid API credentials.
 
 use llm_trade_execution::{
-    BybitClient, BybitConfig, TimeFrame, MarketImpactEstimator,
+    BybitClient, TimeFrame, MarketImpactEstimator, TradeDirection,
 };
 
 #[tokio::main]
@@ -149,7 +149,7 @@ async fn main() -> anyhow::Result<()> {
 
                 let buy_volume: f64 = trades
                     .iter()
-                    .filter(|t| t.direction == llm_trade_execution::TradeDirection::Buy)
+                    .filter(|t| t.direction == TradeDirection::Buy)
                     .map(|t| t.quantity)
                     .sum();
 
@@ -162,7 +162,7 @@ async fn main() -> anyhow::Result<()> {
                 for trade in trades.iter().take(5) {
                     println!(
                         "  {} {:.4} @ {:.2} ({})",
-                        if trade.direction == llm_trade_execution::TradeDirection::Buy { "BUY " } else { "SELL" },
+                        if trade.direction == TradeDirection::Buy { "BUY " } else { "SELL" },
                         trade.quantity,
                         trade.price,
                         trade.timestamp.format("%H:%M:%S")

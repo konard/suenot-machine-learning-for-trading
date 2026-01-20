@@ -47,7 +47,7 @@
 //!     let strategy = TwapStrategy::new(60); // 60-second slices
 //!
 //!     // Initialize the execution engine
-//!     let engine = ExecutionEngine::new(config);
+//!     let mut engine = ExecutionEngine::new(config);
 //!
 //!     // Execute the order
 //!     let result = engine.execute(order, Box::new(strategy)).await?;
@@ -70,7 +70,7 @@ pub mod utils;
 // Re-export main types for convenience
 pub use data::{
     BybitClient, BybitConfig, MarketData, MarketDataError, OhlcvBar, OrderBook,
-    OrderBookLevel, PriceData, Ticker, TimeFrame, Trade,
+    OrderBookLevel, PriceData, Ticker, TimeFrame, Trade, TradeDirection,
 };
 pub use execution::{
     ChildOrder, ChildOrderStatus, ExecutionConfig, ExecutionEngine, ExecutionError,
@@ -82,8 +82,8 @@ pub use impact::{
     MarketImpactModel, TemporaryImpact, PermanentImpact,
 };
 pub use strategy::{
-    AdaptiveStrategy, ExecutionStrategy, ImplementationShortfallStrategy,
-    LlmStrategy, StrategyConfig, TwapStrategy, VwapStrategy,
+    AdaptiveStrategy, ExecutionSlice, ExecutionStrategy, ImplementationShortfallStrategy,
+    LlmStrategy, StrategyConfig, TwapStrategy, VolumeProfile, VwapStrategy,
 };
 pub use utils::{load_config, AppConfig, MetricsRecorder};
 

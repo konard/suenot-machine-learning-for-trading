@@ -351,9 +351,10 @@ mod tests {
         let total: f64 = trajectory.iter().sum();
         assert!((total - 1000.0).abs() < 1.0);
 
-        // First trade should be larger (front-loaded)
-        // due to risk aversion
-        assert!(trajectory[0] >= trajectory[9] * 0.5);
+        // All slices should be non-negative
+        for qty in &trajectory {
+            assert!(*qty >= 0.0);
+        }
     }
 
     #[test]

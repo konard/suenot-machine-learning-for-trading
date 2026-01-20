@@ -14,7 +14,7 @@ mod vwap;
 pub use adaptive::{AdaptiveStrategy, LlmStrategy};
 pub use is::ImplementationShortfallStrategy;
 pub use twap::TwapStrategy;
-pub use vwap::VwapStrategy;
+pub use vwap::{VolumeProfile, VwapStrategy};
 
 use crate::data::OrderBook;
 use crate::execution::{ExecutionError, ParentOrder};

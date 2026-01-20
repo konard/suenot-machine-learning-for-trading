@@ -170,6 +170,7 @@ impl ExecutionStrategy for RandomizedTwapStrategy {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::execution::Side;
 
     fn create_test_order() -> ParentOrder {
         let mut order = ParentOrder::new("BTCUSDT".to_string(), Side::Buy, 10.0, 600);
@@ -217,15 +218,15 @@ mod tests {
     #[test]
     fn test_twap_respects_spread_limit() {
         let strategy = TwapStrategy::with_config(StrategyConfig {
-            max_spread_bps: 1.0, // Very tight
+            max_spread_bps: 0.1, // Extremely tight - only 0.1 bps
             ..Default::default()
         });
         let order = create_test_order();
-        let book = create_test_orderbook(); // Has wider spread
+        let book = create_test_orderbook(); // Has ~0.4 bps spread
 
         let slice = strategy.next_slice(&order, &book).unwrap();
 
-        // Should skip due to wide spread
+        // Should skip due to spread being wider than 0.1 bps
         assert_eq!(slice.quantity, 0.0);
     }
 

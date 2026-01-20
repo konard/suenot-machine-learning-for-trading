@@ -298,6 +298,7 @@ impl VwapTracker {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::execution::Side;
 
     fn create_test_order() -> ParentOrder {
         let mut order = ParentOrder::new("BTCUSDT".to_string(), Side::Buy, 10.0, 600);
