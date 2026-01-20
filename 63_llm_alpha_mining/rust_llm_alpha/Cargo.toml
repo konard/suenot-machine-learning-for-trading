@@ -1,0 +1,85 @@
+[package]
+name = "llm_alpha_mining"
+version = "0.1.0"
+edition = "2021"
+authors = ["LLM Alpha Mining Contributors"]
+description = "LLM-powered alpha factor mining toolkit for cryptocurrency trading"
+license = "MIT"
+readme = "README.md"
+
+[lib]
+name = "llm_alpha_mining"
+path = "src/lib.rs"
+
+[[bin]]
+name = "alpha_demo"
+path = "src/bin/alpha_demo.rs"
+
+[[bin]]
+name = "backtest_demo"
+path = "src/bin/backtest_demo.rs"
+
+[[bin]]
+name = "bybit_demo"
+path = "src/bin/bybit_demo.rs"
+
+[[bin]]
+name = "quantagent_demo"
+path = "src/bin/quantagent_demo.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# HTTP client for API calls
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Date/time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Async traits
+async-trait = "0.1"
+
+# Numeric operations
+ndarray = "0.15"
+statrs = "0.16"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Command line parsing
+clap = { version = "4.4", features = ["derive"] }
+
+# Random number generation
+rand = "0.8"
+
+# Regex for expression parsing
+regex = "1.10"
+
+# UUID for unique identifiers
+uuid = { version = "1.6", features = ["v4"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
+criterion = "0.5"
+
+[[bench]]
+name = "alpha_benchmark"
+harness = false
+
+[features]
+default = []
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
