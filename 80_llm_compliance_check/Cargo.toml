@@ -1,0 +1,91 @@
+[package]
+name = "llm_compliance_check"
+version = "0.1.0"
+edition = "2021"
+authors = ["Machine Learning for Trading"]
+description = "LLM-powered compliance checking for quantitative trading"
+license = "MIT"
+repository = "https://github.com/suenot/machine-learning-for-trading"
+keywords = ["trading", "llm", "compliance", "cryptocurrency", "bybit"]
+categories = ["finance", "science"]
+
+[lib]
+name = "llm_compliance_check"
+path = "src/lib.rs"
+
+[[example]]
+name = "basic_compliance"
+path = "examples/basic_compliance.rs"
+
+[[example]]
+name = "crypto_compliance"
+path = "examples/crypto_compliance.rs"
+
+[[example]]
+name = "stock_compliance"
+path = "examples/stock_compliance.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# HTTP client for APIs
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Date/time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Async traits
+async-trait = "0.1"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# UUID for unique identifiers
+uuid = { version = "1.6", features = ["v4", "serde"] }
+
+# Environment variables
+dotenvy = "0.15"
+
+# Statistics and math
+statrs = "0.16"
+ndarray = "0.15"
+
+# Ordered floats for calculations
+ordered-float = "4.2"
+
+# Random number generation for sample data
+rand = "0.8"
+
+# SHA256 for audit IDs
+sha2 = "0.10"
+
+# Hex encoding
+hex = "0.4"
+
+[dev-dependencies]
+tokio-test = "0.4"
+approx = "0.5"
+
+[features]
+default = []
+openai = []
+anthropic = []
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[profile.dev]
+opt-level = 0
+debug = true
