@@ -61,7 +61,7 @@ impl FullContextEmbedding {
         let std_dev = (2.0 / embedding_dim as f64).sqrt();
         let normal = Normal::new(0.0, std_dev).unwrap();
 
-        let init_weights = || -> FCEWeights {
+        let mut init_weights = || -> FCEWeights {
             let input_size = embedding_dim * 2; // concatenated input
             FCEWeights {
                 attention_weights: Array2::from_shape_fn(
@@ -96,7 +96,7 @@ impl FullContextEmbedding {
         }
 
         // Simplified bidirectional encoding using mean context
-        let mean_context = embeddings.mean_axis(Axis(0)).unwrap();
+        let _mean_context = embeddings.mean_axis(Axis(0)).unwrap();
 
         let mut result = Array2::zeros(embeddings.raw_dim());
         for (i, row) in embeddings.rows().into_iter().enumerate() {

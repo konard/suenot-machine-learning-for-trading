@@ -3,11 +3,9 @@
 //! Implements the episodic training paradigm where each training step
 //! simulates a few-shot learning scenario.
 
-use crate::data::MarketPattern;
 use crate::network::MatchingNetwork;
-use ndarray::{Array1, Array2, Axis};
+use ndarray::{Array1, Array2};
 use rand::seq::SliceRandom;
-use rand::Rng;
 use std::collections::HashMap;
 
 /// Configuration for episodic training
@@ -353,6 +351,7 @@ impl EpisodicTrainer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::Rng;
 
     fn create_synthetic_data() -> (Array2<f64>, Array1<usize>) {
         let num_samples = 500;

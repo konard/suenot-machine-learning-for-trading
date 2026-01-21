@@ -375,9 +375,9 @@ mod tests {
 
         let cm = ConfusionMatrix::compute(&predictions, &labels, 3);
 
-        // True class 0: predicted 0 once (correct), predicted 1 once
+        // True class 0: predicted 0 once (correct), predicted 1 once (incorrect)
         assert_eq!(cm.get(0, 0), 1);
-        assert_eq!(cm.get(0, 1), 0);
+        assert_eq!(cm.get(0, 1), 1);
 
         // True class 1: predicted 0 once, 1 once, 2 once
         assert_eq!(cm.get(1, 0), 1);

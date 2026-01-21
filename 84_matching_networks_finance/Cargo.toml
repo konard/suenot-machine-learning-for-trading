@@ -72,11 +72,6 @@ ringbuf = "0.3"
 [dev-dependencies]
 tokio-test = "0.4"
 approx = "0.5"
-criterion = "0.5"
-
-[[bench]]
-name = "matching_network_bench"
-harness = false
 
 [features]
 default = ["bybit"]

@@ -74,9 +74,10 @@ pub use data::{
     MarketPattern,
     MarketFeatures,
     FeatureExtractor,
-    #[cfg(feature = "bybit")]
-    BybitClient,
 };
+
+#[cfg(feature = "bybit")]
+pub use data::BybitClient;
 
 pub use strategy::{
     PatternTradingStrategy,

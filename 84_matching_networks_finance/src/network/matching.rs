@@ -3,7 +3,7 @@
 //! Combines embedding network, attention module, and optional FCE
 //! for end-to-end pattern classification.
 
-use ndarray::{Array1, Array2, Axis};
+use ndarray::{Array1, Array2};
 use super::{EmbeddingNetwork, AttentionModule, FullContextEmbedding, DistanceFunction};
 
 /// Matching Network for few-shot classification

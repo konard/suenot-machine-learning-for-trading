@@ -2,7 +2,7 @@
 //!
 //! Uses Matching Network pattern classification to generate trading signals.
 
-use crate::data::{MarketPattern, MarketFeatures, FeatureExtractor, OHLCVBar};
+use crate::data::{MarketPattern, FeatureExtractor, OHLCVBar};
 use crate::network::MatchingNetwork;
 use ndarray::{Array1, Array2};
 

@@ -3,7 +3,6 @@
 //! Converts raw OHLCV data into features suitable for the Matching Network.
 
 use ndarray::{Array1, Array2};
-use std::collections::VecDeque;
 
 /// OHLCV bar data
 #[derive(Debug, Clone)]
@@ -514,7 +513,7 @@ impl FeatureExtractor {
 
     /// Get the expected feature dimension
     pub fn feature_dim(&self) -> usize {
-        20 // Total number of features
+        21 // Total: 4 returns + 3 volatility + 3 trend + 3 momentum + 2 volume + 2 position + 4 candle
     }
 }
 

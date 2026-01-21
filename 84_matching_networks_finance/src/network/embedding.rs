@@ -6,7 +6,6 @@
 use ndarray::{Array1, Array2, Axis};
 use rand::Rng;
 use rand_distr::Normal;
-use std::f64::consts::E;
 
 /// Multi-layer embedding network with ReLU activations
 #[derive(Debug, Clone)]

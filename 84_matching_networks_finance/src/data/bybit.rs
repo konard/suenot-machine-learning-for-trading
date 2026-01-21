@@ -4,7 +4,7 @@
 
 use super::OHLCVBar;
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use thiserror::Error;
 
 /// Errors that can occur when fetching Bybit data

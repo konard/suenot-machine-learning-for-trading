@@ -209,15 +209,17 @@ impl StockDataLoader {
             // Random walk with trend
             let return_pct = trend + volatility * rng.gen_range(-1.0..1.0);
             let close = price * (1.0 + return_pct);
-
-            // Generate realistic OHLC
-            let intra_vol = volatility * 0.5;
-            let high = close * (1.0 + intra_vol * rng.gen::<f64>());
-            let low = price * (1.0 - intra_vol * rng.gen::<f64>());
             let open = price;
 
-            // Ensure high >= low
-            let (high, low) = if high >= low { (high, low) } else { (low, high) };
+            // Generate realistic OHLC - ensure high is highest and low is lowest
+            let intra_vol = volatility * 0.5;
+            let max_oc = open.max(close);
+            let min_oc = open.min(close);
+
+            // High must be >= max(open, close)
+            let high = max_oc * (1.0 + intra_vol * rng.gen::<f64>());
+            // Low must be <= min(open, close)
+            let low = min_oc * (1.0 - intra_vol * rng.gen::<f64>());
 
             // Volume with some randomness
             let base_volume = 1_000_000.0;
@@ -245,9 +247,6 @@ impl StockDataLoader {
         num_bars: usize,
         start_price: f64,
     ) -> Vec<OHLCVBar> {
-        use rand::Rng;
-        let mut rng = rand::thread_rng();
-
         match pattern.to_lowercase().as_str() {
             "uptrend" => {
                 self.generate_synthetic(num_bars, start_price, 0.02, 0.005)
