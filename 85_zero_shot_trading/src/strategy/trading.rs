@@ -1,11 +1,11 @@
 //! Trading strategy implementation.
 
 use crate::data::attributes::{AssetAttributes, AssetRegistry};
-use crate::data::bybit::{BybitClient, Kline};
+use crate::data::bybit::Kline;
 use crate::model::network::ZeroShotModel;
 use crate::strategy::regime::ZeroShotRegimePredictor;
 use crate::strategy::signals::{Signal, SignalFilter, TimestampedSignal};
-use crate::{MarketRegime, Result, ZeroShotError};
+use crate::{Result, ZeroShotError};
 
 /// Trading strategy configuration.
 #[derive(Debug, Clone)]

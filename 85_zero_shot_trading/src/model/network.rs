@@ -4,6 +4,27 @@ use crate::{MarketRegime, Result, ZeroShotError};
 use rand::Rng;
 use std::collections::HashMap;
 
+/// Model configuration.
+#[derive(Debug, Clone)]
+pub struct ModelConfig {
+    /// Input feature dimension
+    pub input_dim: usize,
+    /// Embedding dimension
+    pub embed_dim: usize,
+    /// Temperature for softmax scaling
+    pub temperature: f64,
+}
+
+impl Default for ModelConfig {
+    fn default() -> Self {
+        Self {
+            input_dim: 11,
+            embed_dim: 64,
+            temperature: 0.1,
+        }
+    }
+}
+
 /// Zero-shot trading model.
 ///
 /// This model maps market features and regime attributes to a shared
@@ -23,12 +44,18 @@ pub struct ZeroShotModel {
 }
 
 impl ZeroShotModel {
-    /// Create a new zero-shot model.
+    /// Create a new zero-shot model from config.
+    pub fn new(config: ModelConfig) -> Self {
+        Self::with_dims(config.input_dim, config.embed_dim, config.temperature)
+    }
+
+    /// Create a new zero-shot model with specific dimensions.
     ///
     /// # Arguments
     /// * `input_dim` - Number of input features per timestep
     /// * `embed_dim` - Dimension of the embedding space
-    pub fn new(input_dim: usize, embed_dim: usize) -> Self {
+    /// * `temperature` - Temperature for softmax scaling
+    pub fn with_dims(input_dim: usize, embed_dim: usize, temperature: f64) -> Self {
         let mut rng = rand::thread_rng();
 
         // Initialize market encoder weights (Xavier initialization)
@@ -54,24 +81,24 @@ impl ZeroShotModel {
         Self {
             input_dim,
             embed_dim,
-            temperature: 0.1,
+            temperature,
             market_weights,
             regime_embeddings,
         }
     }
 
     /// Load model from file.
-    pub fn load(path: &str) -> Result<Self> {
+    pub fn load(_path: &str) -> Result<Self> {
         // In production, this would load from a serialized file
         // For now, create a new model
-        tracing::warn!("Model loading not implemented, creating new model");
-        Ok(Self::new(11, 64))
+        // Note: Model loading not yet implemented
+        Ok(Self::new(ModelConfig::default()))
     }
 
     /// Save model to file.
-    pub fn save(&self, path: &str) -> Result<()> {
+    pub fn save(&self, _path: &str) -> Result<()> {
         // In production, this would serialize the model
-        tracing::warn!("Model saving not implemented");
+        // Note: Model saving not yet implemented
         Ok(())
     }
 
@@ -190,6 +217,41 @@ impl ZeroShotModel {
         Ok((predicted_regime, confidence, probabilities))
     }
 
+    /// Predict market regime from features, returning scores.
+    ///
+    /// # Arguments
+    /// * `features` - Market features (seq_len x input_dim)
+    ///
+    /// # Returns
+    /// * Tuple of (predicted regime, raw scores for all regimes)
+    pub fn predict_regime_with_scores(
+        &self,
+        features: &[Vec<f64>],
+    ) -> Result<(MarketRegime, Vec<f64>)> {
+        // Encode market features
+        let market_embed = self.encode_market(features)?;
+
+        // Compute similarities to all regimes
+        let scores: Vec<f64> = MarketRegime::all()
+            .iter()
+            .map(|regime| {
+                let regime_embed = self.get_regime_embedding(*regime);
+                Self::cosine_similarity(&market_embed, regime_embed) / self.temperature
+            })
+            .collect();
+
+        // Get prediction (highest score)
+        let (predicted_idx, _) = scores
+            .iter()
+            .enumerate()
+            .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+            .unwrap();
+
+        let predicted_regime = MarketRegime::all()[predicted_idx];
+
+        Ok((predicted_regime, scores))
+    }
+
     /// Update regime embedding (for training).
     pub fn update_regime_embedding(&mut self, regime: MarketRegime, embedding: Vec<f64>) {
         let normalized = Self::l2_normalize(&embedding);
@@ -203,14 +265,14 @@ mod tests {
 
     #[test]
     fn test_model_creation() {
-        let model = ZeroShotModel::new(11, 64);
+        let model = ZeroShotModel::new(ModelConfig::default());
         assert_eq!(model.input_dim, 11);
         assert_eq!(model.embed_dim, 64);
     }
 
     #[test]
     fn test_market_encoding() {
-        let model = ZeroShotModel::new(11, 64);
+        let model = ZeroShotModel::new(ModelConfig::default());
 
         // Create dummy features
         let features: Vec<Vec<f64>> = (0..50)
@@ -227,7 +289,7 @@ mod tests {
 
     #[test]
     fn test_regime_prediction() {
-        let model = ZeroShotModel::new(11, 64);
+        let model = ZeroShotModel::new(ModelConfig::default());
 
         let features: Vec<Vec<f64>> = (0..50)
             .map(|_| (0..11).map(|_| rand::random::<f64>()).collect())

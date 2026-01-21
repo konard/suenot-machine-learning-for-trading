@@ -136,7 +136,8 @@ impl ZeroShotRegimePredictor {
     /// Predict regime from kline data.
     pub fn predict(&self, klines: &[crate::data::bybit::Kline]) -> Result<MarketRegime> {
         let features = self.feature_generator.generate(klines)?;
-        self.model.predict_regime(&features)
+        let (regime, _, _) = self.model.predict_regime(&features)?;
+        Ok(regime)
     }
 
     /// Predict with confidence score.

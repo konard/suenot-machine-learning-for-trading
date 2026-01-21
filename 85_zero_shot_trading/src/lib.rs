@@ -42,7 +42,7 @@ pub mod training;
 pub mod strategy;
 pub mod backtest;
 
-pub use model::network::ZeroShotModel;
+pub use model::network::{ZeroShotModel, ModelConfig};
 pub use model::embeddings::EmbeddingSpace;
 pub use data::bybit::BybitClient;
 pub use data::features::{FeatureGenerator, prepare_features};
@@ -55,7 +55,7 @@ pub use backtest::results::{BacktestResults, Trade};
 
 /// Prelude module for convenient imports
 pub mod prelude {
-    pub use crate::model::network::ZeroShotModel;
+    pub use crate::model::network::{ZeroShotModel, ModelConfig};
     pub use crate::model::embeddings::EmbeddingSpace;
     pub use crate::data::bybit::BybitClient;
     pub use crate::data::features::{FeatureGenerator, prepare_features};

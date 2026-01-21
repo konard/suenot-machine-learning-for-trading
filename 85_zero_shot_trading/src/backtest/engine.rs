@@ -6,7 +6,7 @@ use crate::model::network::ZeroShotModel;
 use crate::strategy::signals::Signal;
 use crate::strategy::trading::{Position, StrategyConfig};
 use crate::backtest::results::{BacktestResults, Trade};
-use crate::{MarketRegime, Result, ZeroShotError};
+use crate::{Result, ZeroShotError};
 
 /// Backtesting engine configuration.
 #[derive(Debug, Clone)]
@@ -294,7 +294,7 @@ impl BacktestEngine {
         let winning_trades = self.trades.iter().filter(|t| t.pnl > 0.0).count();
         let losing_trades = total_trades - winning_trades;
 
-        let total_pnl: f64 = self.trades.iter().map(|t| t.pnl).sum();
+        let _total_pnl: f64 = self.trades.iter().map(|t| t.pnl).sum();
         let total_return = (self.portfolio_value - self.config.initial_capital)
             / self.config.initial_capital;
 

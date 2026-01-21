@@ -168,17 +168,13 @@ impl ZeroShotTrainer {
     pub fn train(&mut self, samples: &[TrainingSample]) -> Result<TrainingResult> {
         let start_time = std::time::Instant::now();
 
-        for epoch in 0..self.config.epochs {
+        for _epoch in 0..self.config.epochs {
             let loss = self.train_epoch(samples)?;
 
             // Early stopping if loss is very low
             if loss < 1e-6 {
-                log::info!("Early stopping at epoch {} with loss {}", epoch, loss);
+                // Early stopping at this epoch
                 break;
-            }
-
-            if epoch % 10 == 0 {
-                log::debug!("Epoch {}: loss = {:.6}", epoch, loss);
             }
         }
 
@@ -200,13 +196,13 @@ impl ZeroShotTrainer {
         let mut regime_actuals = Vec::new();
 
         for sample in samples {
-            let predicted = self.model.predict_regime(&sample.market_features)?;
+            let (predicted_regime, _, _) = self.model.predict_regime(&sample.market_features)?;
             let actual = sample.regime;
 
-            regime_predictions.push(predicted);
+            regime_predictions.push(predicted_regime);
             regime_actuals.push(actual);
 
-            if predicted == actual {
+            if predicted_regime == actual {
                 correct += 1;
             }
             total += 1;
@@ -225,7 +221,7 @@ impl ZeroShotTrainer {
         for (pred, actual) in regime_predictions.iter().zip(regime_actuals.iter()) {
             let idx = *actual as usize;
             regime_total[idx] += 1;
-            if pred == actual {
+            if *pred == *actual {
                 regime_correct[idx] += 1;
             }
         }
