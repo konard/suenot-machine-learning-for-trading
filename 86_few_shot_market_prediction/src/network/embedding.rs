@@ -352,21 +352,32 @@ mod tests {
 
     #[test]
     fn test_forward_with_custom_params() {
-        let config = EmbeddingConfig::new(4, vec![8], 4);
+        // Disable normalization so scaling weights produces different outputs
+        let config = EmbeddingConfig {
+            input_dim: 4,
+            hidden_dims: vec![8],
+            output_dim: 4,
+            normalize_embeddings: false, // Disable normalization for this test
+            dropout_rate: 0.0,
+            activation: ActivationType::ReLU,
+            use_batch_norm: false,
+        };
         let network = EmbeddingNetwork::new(config);
 
-        // Clone and modify parameters
+        // Clone and modify parameters by adding a bias offset (not just scaling)
         let mut custom_params = network.clone_params();
-        custom_params.scale_weights(2.0);
+        for bias in &mut custom_params.biases {
+            bias.mapv_inplace(|b| b + 0.5);
+        }
 
         let input = Array1::from_vec(vec![0.5; 4]);
 
         let output_default = network.forward(&input, None);
         let output_custom = network.forward(&input, Some(&custom_params));
 
-        // Outputs should be different
+        // Outputs should be different due to bias change
         let diff: f64 = (&output_default - &output_custom).mapv(|x| x.abs()).sum();
-        assert!(diff > 0.0);
+        assert!(diff > 0.0, "Expected diff > 0.0, got {}", diff);
     }
 
     #[test]

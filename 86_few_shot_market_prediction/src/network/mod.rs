@@ -8,5 +8,5 @@
 mod embedding;
 mod distance;
 
-pub use embedding::{EmbeddingNetwork, EmbeddingConfig, ActivationType};
+pub use embedding::{EmbeddingNetwork, EmbeddingConfig, ActivationType, NetworkParams};
 pub use distance::{DistanceComputer, DistanceMetric};

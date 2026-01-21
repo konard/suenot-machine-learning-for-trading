@@ -6,4 +6,4 @@ mod episode;
 mod trainer;
 
 pub use episode::{Episode, EpisodeGenerator, EpisodeConfig};
-pub use trainer::{MetaTrainer, MetaTrainerConfig};
+pub use trainer::{MetaTrainer, MetaTrainerConfig, TrainingResult};

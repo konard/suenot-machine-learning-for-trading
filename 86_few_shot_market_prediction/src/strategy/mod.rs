@@ -6,6 +6,6 @@ mod regime;
 mod signal;
 mod risk;
 
-pub use regime::{MarketRegime, RegimeClassifier};
-pub use signal::{TradingSignal, SignalType, SignalGenerator};
-pub use risk::{RiskManager, RiskConfig};
+pub use regime::{MarketRegime, RegimeClassifier, RegimeClassification};
+pub use signal::{TradingSignal, SignalType, SignalGenerator, SignalConfig};
+pub use risk::{RiskManager, RiskConfig, RiskCheckResult, RiskSummary, Position};

@@ -217,7 +217,9 @@ mod tests {
 
     #[test]
     fn test_few_shot_predictor_metric() {
-        let config = FewShotConfig::default().with_method(FewShotMethod::Metric);
+        let config = FewShotConfig::default()
+            .with_method(FewShotMethod::Metric)
+            .with_input_dim(10); // Match test data dimension
         let mut predictor = FewShotPredictor::new(config);
 
         let (support, support_labels, query, _) = create_synthetic_data();

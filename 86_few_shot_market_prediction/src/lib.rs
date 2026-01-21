@@ -58,13 +58,13 @@ pub mod strategy;
 pub mod prelude {
     // Network components
     pub use crate::network::{
-        EmbeddingNetwork, EmbeddingConfig, ActivationType,
+        EmbeddingNetwork, EmbeddingConfig, ActivationType, NetworkParams,
         DistanceComputer, DistanceMetric,
     };
 
     // Few-shot methods
     pub use crate::methods::{
-        FewShotMethod, FewShotConfig, FewShotPredictor,
+        FewShotMethod, FewShotConfig, FewShotPredictor, FewShotLearner,
         MetricBasedLearner, MAMLLearner, SiameseLearner, HybridLearner,
         PredictionResult, AdaptationResult,
     };
@@ -73,20 +73,20 @@ pub mod prelude {
     pub use crate::data::{
         BybitClient, BybitConfig,
         MarketFeatures, FeatureExtractor, FeatureConfig,
-        Kline, Trade, OrderBook, FundingRate,
+        Kline, Trade, OrderBook, FundingRate, Ticker,
     };
 
     // Training components
     pub use crate::training::{
         Episode, EpisodeGenerator, EpisodeConfig,
-        MetaTrainer, MetaTrainerConfig,
+        MetaTrainer, MetaTrainerConfig, TrainingResult,
     };
 
     // Strategy components
     pub use crate::strategy::{
-        MarketRegime, RegimeClassifier,
-        TradingSignal, SignalType, SignalGenerator,
-        RiskManager, RiskConfig,
+        MarketRegime, RegimeClassifier, RegimeClassification,
+        TradingSignal, SignalType, SignalGenerator, SignalConfig,
+        RiskManager, RiskConfig, RiskCheckResult, RiskSummary, Position,
     };
 }
 
