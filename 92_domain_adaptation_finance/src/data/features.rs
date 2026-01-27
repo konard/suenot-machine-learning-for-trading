@@ -29,7 +29,8 @@
 //! let features = feature_gen.generate_features(&klines);
 //! let labels = feature_gen.generate_labels(&klines);
 //!
-//! assert_eq!(features.len(), labels.len());
+//! // Labels have one fewer element (need next candle for direction label)
+//! assert_eq!(features.len(), labels.len() + 1);
 //! ```
 
 use crate::data::bybit::Kline;

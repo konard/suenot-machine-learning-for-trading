@@ -456,7 +456,8 @@ mod tests {
         let trades = strategy.execute(&klines).unwrap();
         // Should produce some trades with 200 klines
         // (exact number depends on model initialization)
-        assert!(trades.len() >= 0); // No panic is the main test
+        // Verify execution completes without panic; trade count depends on model init
+        let _ = trades.len();
     }
 
     #[test]
