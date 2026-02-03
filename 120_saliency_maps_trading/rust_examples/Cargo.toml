@@ -1,0 +1,67 @@
+[package]
+name = "saliency_maps_trading"
+version = "0.1.0"
+edition = "2021"
+description = "Saliency maps for cryptocurrency trading using Bybit data"
+authors = ["ML Trading Examples"]
+
+[lib]
+name = "saliency_maps_trading"
+path = "src/lib.rs"
+
+[[example]]
+name = "fetch_data"
+path = "examples/fetch_data.rs"
+
+[[example]]
+name = "saliency_trading"
+path = "examples/saliency_trading.rs"
+
+[[example]]
+name = "backtest"
+path = "examples/backtest.rs"
+
+[dependencies]
+# HTTP client for API requests
+reqwest = { version = "0.11", features = ["json", "blocking"] }
+
+# JSON serialization/deserialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+
+# Linear algebra
+ndarray = { version = "0.15", features = ["serde"] }
+
+# Statistics
+statrs = "0.16"
+
+# Date/time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Environment variables
+dotenv = "0.15"
+
+# Logging
+log = "0.4"
+env_logger = "0.10"
+
+# CSV for data export/import
+csv = "1.3"
+
+# Random number generation
+rand = "0.8"
+
+# HMAC for API authentication
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
+
+[dev-dependencies]
+approx = "0.5"
