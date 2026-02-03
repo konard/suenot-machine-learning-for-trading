@@ -1,0 +1,32 @@
+[package]
+name = "concept_bottleneck_trading"
+version = "0.1.0"
+edition = "2021"
+description = "Concept Bottleneck Model implementation for interpretable algorithmic trading"
+license = "MIT"
+
+[lib]
+name = "concept_bottleneck_trading"
+path = "src/lib.rs"
+
+[[example]]
+name = "basic_cbm"
+path = "examples/basic_cbm.rs"
+
+[[example]]
+name = "trading_cbm"
+path = "examples/trading_cbm.rs"
+
+[dependencies]
+reqwest = { version = "0.11", features = ["json", "blocking"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+chrono = { version = "0.4", features = ["serde"] }
+ndarray = "0.15"
+thiserror = "1.0"
+log = "0.4"
+env_logger = "0.10"
+
+[dev-dependencies]
+tokio-test = "0.4"
