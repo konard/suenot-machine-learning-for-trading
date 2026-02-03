@@ -1,0 +1,27 @@
+[package]
+name = "mediation_analysis"
+version = "0.1.0"
+edition = "2021"
+authors = ["ML4T Contributors"]
+description = "High-performance mediation analysis for financial trading"
+license = "MIT"
+repository = "https://github.com/suenot/machine-learning-for-trading"
+
+[dependencies]
+ndarray = "0.15"
+rand = "0.8"
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "mediation_bench"
+harness = false
+
+[lib]
+name = "mediation_analysis"
+path = "src/lib.rs"
+
+[[example]]
+name = "basic_mediation"
+path = "examples/basic_mediation.rs"
