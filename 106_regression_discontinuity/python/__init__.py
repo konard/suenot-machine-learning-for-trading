@@ -16,18 +16,44 @@ from .rdd_model import (
     RDDResults,
     RDDValidator,
     Kernel,
+    compute_rsi,
 )
-from .data_loader import RDDDataLoader
-from .backtest import RDDBacktester, RDDStrategy
+from .data_loader import (
+    BybitClient,
+    MarketData,
+    Candle,
+    FundingRate,
+    fetch_stock_data,
+    generate_synthetic_data,
+    generate_synthetic_funding_rates,
+)
+from .backtest import (
+    RDDBacktester,
+    BacktestResults,
+    Trade,
+    SignalType,
+)
 
 __all__ = [
+    # RDD Model
     "RegressionDiscontinuity",
     "RDDResults",
     "RDDValidator",
     "Kernel",
-    "RDDDataLoader",
+    "compute_rsi",
+    # Data Loading
+    "BybitClient",
+    "MarketData",
+    "Candle",
+    "FundingRate",
+    "fetch_stock_data",
+    "generate_synthetic_data",
+    "generate_synthetic_funding_rates",
+    # Backtesting
     "RDDBacktester",
-    "RDDStrategy",
+    "BacktestResults",
+    "Trade",
+    "SignalType",
 ]
 
 __version__ = "0.1.0"
