@@ -1,0 +1,19 @@
+# Mamba4Cast Zero-Shot Forecasting Dependencies
+
+# Core dependencies
+torch>=2.0.0
+numpy>=1.24.0
+pandas>=2.0.0
+
+# Data loading
+yfinance>=0.2.0
+requests>=2.31.0
+
+# Visualization
+matplotlib>=3.7.0
+
+# ML utilities
+scikit-learn>=1.3.0
+
+# Optional: For faster inference
+# mamba-ssm>=1.0.0  # Official Mamba implementation

@@ -1,0 +1,48 @@
+[package]
+name = "mamba4cast"
+version = "0.1.0"
+edition = "2021"
+authors = ["ML4Trading Contributors"]
+description = "Mamba4Cast Zero-Shot Time Series Forecasting in Rust"
+license = "MIT"
+repository = "https://github.com/suenot/machine-learning-for-trading"
+
+[dependencies]
+# Numerical computing
+ndarray = "0.15"
+ndarray-rand = "0.14"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# HTTP client for API access
+reqwest = { version = "0.11", features = ["json", "blocking"] }
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Date/time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Random number generation
+rand = "0.8"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[example]]
+name = "zero_shot_forecast"
+path = "examples/zero_shot_forecast.rs"
+
+[[example]]
+name = "trading_signals"
+path = "examples/trading_signals.rs"
+
+[[bench]]
+name = "benchmark"
+harness = false
