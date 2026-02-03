@@ -1,7 +1,9 @@
-//! Trading strategy components.
+//! # Trading Module
+//!
+//! This module contains trading signal generation and strategy implementations.
 
 pub mod signals;
 pub mod strategy;
 
-pub use signals::TradingSignal;
-pub use strategy::TradingStrategy;
+pub use signals::{TradingSignal, SignalGenerator};
+pub use strategy::DeepLiftStrategy;

@@ -1,5 +1,8 @@
-//! Neural network models for trading.
+//! # Model Module
+//!
+//! This module contains the DeepLift neural network implementation
+//! and related structures for computing feature attributions.
 
-pub mod network;
+pub mod deeplift;
 
-pub use network::TradingNetwork;
+pub use deeplift::{DeepLiftConfig, DeepLiftLayer, DeepLiftNetwork};
