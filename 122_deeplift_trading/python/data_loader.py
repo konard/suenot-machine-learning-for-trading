@@ -1,535 +1,825 @@
 """
-Data loading and feature engineering for DeepLIFT trading.
+Data loading and feature engineering for DeepLift Trading.
 
 This module provides:
-- BybitClient for fetching cryptocurrency data
-- FeatureGenerator for computing technical indicators
-- SimulatedDataGenerator for testing
+- StockDataLoader: Fetch stock market data using yfinance
+- BybitDataLoader: Fetch cryptocurrency data from Bybit API
+- Feature engineering: Technical indicators (RSI, MACD, Bollinger Bands, etc.)
+- Train/test data splitting utilities
 """
 
 import numpy as np
 import pandas as pd
 import requests
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict, Union
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from abc import ABC, abstractmethod
 import logging
+import warnings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class Kline:
-    """Single candlestick data point."""
-    timestamp: int
+class OHLCV:
+    """Standard OHLCV (Open, High, Low, Close, Volume) data point."""
+    timestamp: datetime
     open: float
     high: float
     low: float
     close: float
     volume: float
-    turnover: float
 
     def to_dict(self) -> dict:
+        """Convert to dictionary."""
         return {
             'timestamp': self.timestamp,
             'open': self.open,
             'high': self.high,
             'low': self.low,
             'close': self.close,
-            'volume': self.volume,
-            'turnover': self.turnover
+            'volume': self.volume
         }
 
 
-class BybitClient:
-    """Client for fetching data from Bybit exchange API."""
+class BaseDataLoader(ABC):
+    """Abstract base class for data loaders."""
 
-    def __init__(self, base_url: str = "https://api.bybit.com"):
-        self.base_url = base_url
+    @abstractmethod
+    def fetch_data(self, symbol: str, **kwargs) -> pd.DataFrame:
+        """Fetch market data for a symbol."""
+        pass
+
+    @abstractmethod
+    def prepare_features(self, df: pd.DataFrame) -> Tuple[np.ndarray, List[str]]:
+        """Prepare features from raw data."""
+        pass
+
+
+class StockDataLoader(BaseDataLoader):
+    """
+    Data loader for stock market data using yfinance.
+
+    Fetches historical price data and computes technical indicators
+    for use with DeepLift Trading models.
+
+    Example:
+        >>> loader = StockDataLoader()
+        >>> df = loader.fetch_data('AAPL', period='1y', interval='1d')
+        >>> features, feature_names = loader.prepare_features(df)
+    """
+
+    def __init__(self, cache_dir: Optional[str] = None):
+        """
+        Initialize StockDataLoader.
+
+        Args:
+            cache_dir: Directory for caching downloaded data (optional)
+        """
+        self.cache_dir = cache_dir
+        self._yf = None
+
+    def _get_yfinance(self):
+        """Lazy import of yfinance."""
+        if self._yf is None:
+            try:
+                import yfinance as yf
+                self._yf = yf
+            except ImportError:
+                raise ImportError(
+                    "yfinance is required for StockDataLoader. "
+                    "Install with: pip install yfinance"
+                )
+        return self._yf
+
+    def fetch_data(
+        self,
+        symbol: str,
+        period: str = "1y",
+        interval: str = "1d",
+        start: Optional[str] = None,
+        end: Optional[str] = None
+    ) -> pd.DataFrame:
+        """
+        Fetch historical stock data using yfinance.
+
+        Args:
+            symbol: Stock ticker symbol (e.g., 'AAPL', 'GOOGL')
+            period: Data period ('1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y', '10y', 'ytd', 'max')
+            interval: Data interval ('1m', '2m', '5m', '15m', '30m', '60m', '90m', '1h', '1d', '5d', '1wk', '1mo', '3mo')
+            start: Start date (YYYY-MM-DD), overrides period if specified
+            end: End date (YYYY-MM-DD), overrides period if specified
+
+        Returns:
+            DataFrame with OHLCV data and datetime index
+        """
+        yf = self._get_yfinance()
+
+        logger.info(f"Fetching data for {symbol}...")
+
+        ticker = yf.Ticker(symbol)
+
+        if start and end:
+            df = ticker.history(start=start, end=end, interval=interval)
+        else:
+            df = ticker.history(period=period, interval=interval)
+
+        if df.empty:
+            raise ValueError(f"No data found for symbol: {symbol}")
+
+        # Standardize column names
+        df.columns = df.columns.str.lower()
+        df = df.rename(columns={
+            'adj close': 'adj_close',
+            'stock splits': 'stock_splits'
+        })
+
+        # Keep only OHLCV columns
+        required_cols = ['open', 'high', 'low', 'close', 'volume']
+        for col in required_cols:
+            if col not in df.columns:
+                raise ValueError(f"Missing required column: {col}")
+
+        logger.info(f"Fetched {len(df)} rows for {symbol}")
+
+        return df[required_cols]
+
+    def fetch_multiple(
+        self,
+        symbols: List[str],
+        **kwargs
+    ) -> Dict[str, pd.DataFrame]:
+        """
+        Fetch data for multiple symbols.
+
+        Args:
+            symbols: List of stock ticker symbols
+            **kwargs: Arguments passed to fetch_data
+
+        Returns:
+            Dictionary mapping symbols to DataFrames
+        """
+        results = {}
+        for symbol in symbols:
+            try:
+                results[symbol] = self.fetch_data(symbol, **kwargs)
+            except Exception as e:
+                logger.warning(f"Failed to fetch {symbol}: {e}")
+        return results
+
+    def prepare_features(
+        self,
+        df: pd.DataFrame,
+        include_indicators: Optional[List[str]] = None
+    ) -> Tuple[np.ndarray, List[str]]:
+        """
+        Prepare technical indicator features from OHLCV data.
+
+        Args:
+            df: DataFrame with OHLCV data
+            include_indicators: List of indicators to include (None = all)
+
+        Returns:
+            Tuple of (features array, feature names list)
+        """
+        features_df = pd.DataFrame(index=df.index)
+
+        # Price returns
+        features_df['return_1d'] = df['close'].pct_change(1)
+        features_df['return_5d'] = df['close'].pct_change(5)
+        features_df['return_10d'] = df['close'].pct_change(10)
+        features_df['return_20d'] = df['close'].pct_change(20)
+
+        # Moving average ratios
+        features_df['sma_10_ratio'] = df['close'] / df['close'].rolling(10).mean() - 1
+        features_df['sma_20_ratio'] = df['close'] / df['close'].rolling(20).mean() - 1
+        features_df['sma_50_ratio'] = df['close'] / df['close'].rolling(50).mean() - 1
+
+        # EMA ratios
+        features_df['ema_10_ratio'] = df['close'] / df['close'].ewm(span=10).mean() - 1
+        features_df['ema_20_ratio'] = df['close'] / df['close'].ewm(span=20).mean() - 1
+
+        # Volatility
+        features_df['volatility_10d'] = df['close'].pct_change().rolling(10).std()
+        features_df['volatility_20d'] = df['close'].pct_change().rolling(20).std()
+
+        # RSI
+        features_df['rsi_14'] = self._compute_rsi(df['close'], period=14)
+
+        # MACD
+        macd, signal, hist = self._compute_macd(df['close'])
+        features_df['macd'] = macd / df['close']  # Normalized
+        features_df['macd_signal'] = signal / df['close']
+        features_df['macd_hist'] = hist / df['close']
+
+        # Bollinger Bands position
+        features_df['bb_position'] = self._compute_bollinger_position(df['close'])
+
+        # Volume features
+        features_df['volume_sma_ratio'] = df['volume'] / df['volume'].rolling(20).mean() - 1
+        features_df['volume_change'] = df['volume'].pct_change()
+
+        # High-Low range
+        features_df['hl_range'] = (df['high'] - df['low']) / df['close']
+
+        # Momentum
+        features_df['momentum_10d'] = df['close'] / df['close'].shift(10) - 1
+
+        # Filter indicators if specified
+        if include_indicators:
+            available = [col for col in include_indicators if col in features_df.columns]
+            features_df = features_df[available]
+
+        # Drop NaN rows
+        features_df = features_df.dropna()
+
+        feature_names = features_df.columns.tolist()
+        features = features_df.values
+
+        return features, feature_names
+
+    def get_train_test_split(
+        self,
+        df: pd.DataFrame,
+        target_horizon: int = 5,
+        train_ratio: float = 0.8,
+        buy_threshold: float = 0.005,
+        sell_threshold: float = -0.005
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, List[str]]:
+        """
+        Prepare train/test split with features and labels.
+
+        Args:
+            df: DataFrame with OHLCV data
+            target_horizon: Number of periods ahead for target
+            train_ratio: Fraction of data for training
+            buy_threshold: Return threshold for BUY signal
+            sell_threshold: Return threshold for SELL signal
+
+        Returns:
+            Tuple of (X_train, y_train, X_test, y_test, feature_names)
+        """
+        # Prepare features
+        features, feature_names = self.prepare_features(df)
+
+        # Align with original data (features have NaN dropped)
+        aligned_df = df.iloc[-len(features):]
+
+        # Create future returns target
+        future_returns = aligned_df['close'].pct_change(target_horizon).shift(-target_horizon)
+
+        # Create labels (0=Sell, 1=Hold, 2=Buy)
+        labels = np.ones(len(future_returns), dtype=np.int64)  # Default HOLD
+        labels[future_returns > buy_threshold] = 2  # BUY
+        labels[future_returns < sell_threshold] = 0  # SELL
+
+        # Remove rows where target is NaN
+        valid_mask = ~future_returns.isna().values
+        features = features[valid_mask]
+        labels = labels[valid_mask]
+
+        # Split data
+        split_idx = int(len(features) * train_ratio)
+        X_train, X_test = features[:split_idx], features[split_idx:]
+        y_train, y_test = labels[:split_idx], labels[split_idx:]
+
+        return X_train, y_train, X_test, y_test, feature_names
+
+    @staticmethod
+    def _compute_rsi(prices: pd.Series, period: int = 14) -> pd.Series:
+        """Compute Relative Strength Index."""
+        delta = prices.diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+        rs = gain / (loss + 1e-10)
+        rsi = 100 - (100 / (1 + rs))
+        return rsi / 100  # Normalize to [0, 1]
+
+    @staticmethod
+    def _compute_macd(
+        prices: pd.Series,
+        fast_period: int = 12,
+        slow_period: int = 26,
+        signal_period: int = 9
+    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+        """Compute MACD indicator."""
+        fast_ema = prices.ewm(span=fast_period).mean()
+        slow_ema = prices.ewm(span=slow_period).mean()
+        macd = fast_ema - slow_ema
+        signal = macd.ewm(span=signal_period).mean()
+        histogram = macd - signal
+        return macd, signal, histogram
+
+    @staticmethod
+    def _compute_bollinger_position(
+        prices: pd.Series,
+        period: int = 20,
+        num_std: float = 2.0
+    ) -> pd.Series:
+        """Compute position within Bollinger Bands."""
+        sma = prices.rolling(period).mean()
+        std = prices.rolling(period).std()
+        upper = sma + num_std * std
+        lower = sma - num_std * std
+        position = (prices - lower) / (upper - lower + 1e-10)
+        return position - 0.5  # Center around 0
+
+
+class BybitDataLoader(BaseDataLoader):
+    """
+    Data loader for cryptocurrency data from Bybit API.
+
+    Fetches historical kline (candlestick) data from Bybit exchange.
+
+    Example:
+        >>> loader = BybitDataLoader()
+        >>> df = loader.fetch_data('BTCUSDT', interval='60', limit=500)
+        >>> features, feature_names = loader.prepare_features(df)
+    """
+
+    BASE_URL = "https://api.bybit.com"
+
+    def __init__(self, testnet: bool = False):
+        """
+        Initialize BybitDataLoader.
+
+        Args:
+            testnet: Whether to use testnet API
+        """
+        self.base_url = "https://api-testnet.bybit.com" if testnet else self.BASE_URL
         self.session = requests.Session()
 
-    def fetch_klines(
+    def fetch_data(
         self,
         symbol: str,
         interval: str = "60",
-        limit: int = 200
-    ) -> List[Kline]:
+        limit: int = 200,
+        category: str = "spot",
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None
+    ) -> pd.DataFrame:
         """
-        Fetch historical klines from Bybit.
+        Fetch historical kline data from Bybit.
 
         Args:
-            symbol: Trading pair (e.g., "BTCUSDT")
-            interval: Kline interval ("1", "5", "15", "60", "D")
-            limit: Number of klines (max 1000)
+            symbol: Trading pair (e.g., 'BTCUSDT', 'ETHUSDT')
+            interval: Kline interval ('1', '3', '5', '15', '30', '60', '120', '240', '360', '720', 'D', 'W', 'M')
+            limit: Number of klines to fetch (max 1000)
+            category: Market category ('spot', 'linear', 'inverse')
+            start_time: Start timestamp in milliseconds
+            end_time: End timestamp in milliseconds
 
         Returns:
-            List of Kline objects sorted by timestamp ascending
+            DataFrame with OHLCV data
         """
         url = f"{self.base_url}/v5/market/kline"
+
         params = {
-            "category": "spot",
+            "category": category,
             "symbol": symbol,
             "interval": interval,
-            "limit": limit
+            "limit": min(limit, 1000)
         }
 
+        if start_time:
+            params["start"] = start_time
+        if end_time:
+            params["end"] = end_time
+
         try:
-            response = self.session.get(url, params=params)
+            response = self.session.get(url, params=params, timeout=10)
             response.raise_for_status()
             data = response.json()
 
             if data.get("retCode") != 0:
                 raise ValueError(f"API error: {data.get('retMsg')}")
 
-            klines = []
-            for item in data["result"]["list"]:
-                klines.append(Kline(
-                    timestamp=int(item[0]),
-                    open=float(item[1]),
-                    high=float(item[2]),
-                    low=float(item[3]),
-                    close=float(item[4]),
-                    volume=float(item[5]),
-                    turnover=float(item[6])
-                ))
+            klines = data["result"]["list"]
+
+            # Parse klines
+            records = []
+            for item in klines:
+                records.append({
+                    'timestamp': pd.to_datetime(int(item[0]), unit='ms'),
+                    'open': float(item[1]),
+                    'high': float(item[2]),
+                    'low': float(item[3]),
+                    'close': float(item[4]),
+                    'volume': float(item[5]),
+                    'turnover': float(item[6])
+                })
+
+            df = pd.DataFrame(records)
 
             # Bybit returns descending order, reverse to ascending
-            klines.reverse()
-            return klines
+            df = df.iloc[::-1].reset_index(drop=True)
+            df.set_index('timestamp', inplace=True)
+
+            logger.info(f"Fetched {len(df)} klines for {symbol}")
+
+            return df
 
         except requests.RequestException as e:
             logger.error(f"Failed to fetch klines: {e}")
             raise
 
-    def fetch_multi_symbol(
+    def fetch_multiple(
         self,
         symbols: List[str],
-        interval: str = "60",
-        limit: int = 200
-    ) -> dict:
-        """Fetch klines for multiple symbols."""
+        **kwargs
+    ) -> Dict[str, pd.DataFrame]:
+        """
+        Fetch klines for multiple symbols.
+
+        Args:
+            symbols: List of trading pairs
+            **kwargs: Arguments passed to fetch_data
+
+        Returns:
+            Dictionary mapping symbols to DataFrames
+        """
         results = {}
         for symbol in symbols:
             try:
-                results[symbol] = self.fetch_klines(symbol, interval, limit)
-                logger.info(f"Fetched {len(results[symbol])} klines for {symbol}")
+                results[symbol] = self.fetch_data(symbol, **kwargs)
             except Exception as e:
                 logger.warning(f"Failed to fetch {symbol}: {e}")
         return results
 
+    def prepare_features(
+        self,
+        df: pd.DataFrame,
+        include_indicators: Optional[List[str]] = None
+    ) -> Tuple[np.ndarray, List[str]]:
+        """
+        Prepare technical indicator features from kline data.
+
+        Uses same indicators as StockDataLoader for consistency.
+
+        Args:
+            df: DataFrame with OHLCV data
+            include_indicators: List of indicators to include (None = all)
+
+        Returns:
+            Tuple of (features array, feature names list)
+        """
+        # Use StockDataLoader's prepare_features for consistency
+        stock_loader = StockDataLoader()
+        return stock_loader.prepare_features(df, include_indicators)
+
+    def get_train_test_split(
+        self,
+        df: pd.DataFrame,
+        target_horizon: int = 5,
+        train_ratio: float = 0.8,
+        buy_threshold: float = 0.005,
+        sell_threshold: float = -0.005
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, List[str]]:
+        """
+        Prepare train/test split with features and labels.
+
+        Args:
+            df: DataFrame with kline data
+            target_horizon: Number of periods ahead for target
+            train_ratio: Fraction of data for training
+            buy_threshold: Return threshold for BUY signal
+            sell_threshold: Return threshold for SELL signal
+
+        Returns:
+            Tuple of (X_train, y_train, X_test, y_test, feature_names)
+        """
+        stock_loader = StockDataLoader()
+        return stock_loader.get_train_test_split(
+            df, target_horizon, train_ratio, buy_threshold, sell_threshold
+        )
+
+    def get_ticker_info(self, symbol: str, category: str = "spot") -> Dict:
+        """
+        Get current ticker information.
+
+        Args:
+            symbol: Trading pair
+            category: Market category
+
+        Returns:
+            Dictionary with ticker info
+        """
+        url = f"{self.base_url}/v5/market/tickers"
+        params = {"category": category, "symbol": symbol}
+
+        response = self.session.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        if data.get("retCode") != 0:
+            raise ValueError(f"API error: {data.get('retMsg')}")
+
+        return data["result"]["list"][0] if data["result"]["list"] else {}
+
 
 class SimulatedDataGenerator:
-    """Generate simulated market data for testing."""
+    """
+    Generate simulated market data for testing and development.
+
+    Useful for testing strategies without needing real market data.
+    """
 
     @staticmethod
-    def generate_klines(
-        num_klines: int,
-        base_price: float = 50000.0,
-        volatility: float = 0.02
-    ) -> List[Kline]:
-        """Generate random walk klines."""
-        klines = []
-        price = base_price
-        base_timestamp = int((datetime.now() - timedelta(hours=num_klines)).timestamp() * 1000)
-
-        for i in range(num_klines):
-            return_pct = np.random.normal(0, volatility)
-            open_price = price
-            close_price = price * (1 + return_pct)
-            high_price = max(open_price, close_price) * (1 + np.random.random() * 0.01)
-            low_price = min(open_price, close_price) * (1 - np.random.random() * 0.01)
-            volume = np.random.random() * 1000000
-
-            klines.append(Kline(
-                timestamp=base_timestamp + i * 3600000,
-                open=open_price,
-                high=high_price,
-                low=low_price,
-                close=close_price,
-                volume=volume,
-                turnover=volume * close_price
-            ))
-            price = close_price
-
-        return klines
-
-    @staticmethod
-    def generate_trending_klines(
-        num_klines: int,
-        base_price: float = 50000.0,
+    def generate_random_walk(
+        n_periods: int,
+        base_price: float = 100.0,
         volatility: float = 0.02,
-        trend: float = 0.0002
-    ) -> List[Kline]:
-        """Generate klines with a trend component."""
-        klines = []
-        price = base_price
-        base_timestamp = int((datetime.now() - timedelta(hours=num_klines)).timestamp() * 1000)
+        drift: float = 0.0
+    ) -> pd.DataFrame:
+        """
+        Generate random walk price data.
 
-        for i in range(num_klines):
-            return_pct = np.random.normal(0, volatility) + trend
-            open_price = price
-            close_price = price * (1 + return_pct)
-            high_price = max(open_price, close_price) * (1 + np.random.random() * 0.01)
-            low_price = min(open_price, close_price) * (1 - np.random.random() * 0.01)
-            volume = np.random.random() * 1000000
+        Args:
+            n_periods: Number of periods to generate
+            base_price: Starting price
+            volatility: Daily volatility (standard deviation)
+            drift: Daily drift (mean return)
 
-            klines.append(Kline(
-                timestamp=base_timestamp + i * 3600000,
-                open=open_price,
-                high=high_price,
-                low=low_price,
-                close=close_price,
-                volume=volume,
-                turnover=volume * close_price
-            ))
-            price = close_price
+        Returns:
+            DataFrame with OHLCV data
+        """
+        np.random.seed(None)  # Random seed for each call
 
-        return klines
+        returns = np.random.normal(drift, volatility, n_periods)
+        prices = base_price * np.exp(np.cumsum(returns))
+
+        # Generate OHLCV
+        records = []
+        start_date = datetime.now() - timedelta(days=n_periods)
+
+        for i in range(n_periods):
+            price = prices[i]
+            intraday_vol = volatility * 0.5
+
+            open_price = price * (1 + np.random.normal(0, intraday_vol))
+            close_price = price * (1 + np.random.normal(0, intraday_vol))
+            high_price = max(open_price, close_price) * (1 + abs(np.random.normal(0, intraday_vol)))
+            low_price = min(open_price, close_price) * (1 - abs(np.random.normal(0, intraday_vol)))
+            volume = np.random.exponential(1000000)
+
+            records.append({
+                'timestamp': start_date + timedelta(days=i),
+                'open': open_price,
+                'high': high_price,
+                'low': low_price,
+                'close': close_price,
+                'volume': volume
+            })
+
+        df = pd.DataFrame(records)
+        df.set_index('timestamp', inplace=True)
+
+        return df
 
     @staticmethod
-    def generate_regime_changing_klines(
-        num_klines: int,
-        base_price: float = 50000.0
-    ) -> List[Kline]:
-        """Generate klines with changing market regimes."""
-        regimes = [
-            (0.015, 0.0002, 0.2),   # Bull
-            (0.025, -0.0003, 0.15), # Correction
-            (0.01, 0.0, 0.15),      # Consolidation
-            (0.02, 0.00015, 0.2),   # Recovery
-            (0.03, -0.0001, 0.15),  # Volatility spike
-            (0.012, 0.0001, 0.15),  # Calm growth
-        ]
-
-        klines = []
-        price = base_price
-        base_timestamp = int((datetime.now() - timedelta(hours=num_klines)).timestamp() * 1000)
-        current_idx = 0
-
-        for vol, trend, duration_frac in regimes:
-            regime_len = int(num_klines * duration_frac)
-            for _ in range(regime_len):
-                if current_idx >= num_klines:
-                    break
-
-                return_pct = np.random.normal(0, vol) + trend
-                open_price = price
-                close_price = price * (1 + return_pct)
-                high_price = max(open_price, close_price) * (1 + np.random.random() * 0.01)
-                low_price = min(open_price, close_price) * (1 - np.random.random() * 0.01)
-                volume = np.random.random() * 1000000 * (1 + vol * 10)
-
-                klines.append(Kline(
-                    timestamp=base_timestamp + current_idx * 3600000,
-                    open=open_price,
-                    high=high_price,
-                    low=low_price,
-                    close=close_price,
-                    volume=volume,
-                    turnover=volume * close_price
-                ))
-                price = close_price
-                current_idx += 1
-
-            if current_idx >= num_klines:
-                break
-
-        # Fill remaining with neutral regime
-        while len(klines) < num_klines:
-            return_pct = np.random.normal(0, 0.015)
-            open_price = price
-            close_price = price * (1 + return_pct)
-            high_price = max(open_price, close_price) * (1 + np.random.random() * 0.01)
-            low_price = min(open_price, close_price) * (1 - np.random.random() * 0.01)
-            volume = np.random.random() * 1000000
-
-            klines.append(Kline(
-                timestamp=base_timestamp + len(klines) * 3600000,
-                open=open_price,
-                high=high_price,
-                low=low_price,
-                close=close_price,
-                volume=volume,
-                turnover=volume * close_price
-            ))
-            price = close_price
-
-        return klines
-
-
-class FeatureGenerator:
-    """Generate technical features from price data."""
-
-    def __init__(self, window: int = 20):
-        self.window = window
-
-    def compute_features(self, klines: List[Kline]) -> np.ndarray:
+    def generate_trending_data(
+        n_periods: int,
+        base_price: float = 100.0,
+        trend: str = 'bullish'
+    ) -> pd.DataFrame:
         """
-        Compute all features from kline data.
+        Generate data with a clear trend.
 
-        Returns array of shape (N, 11) where N is number of valid data points.
-        Features: returns_1d, returns_5d, returns_10d, sma_ratio, ema_ratio,
-                  volatility, momentum, rsi, macd, bb_position, volume_sma_ratio
+        Args:
+            n_periods: Number of periods
+            base_price: Starting price
+            trend: 'bullish', 'bearish', or 'sideways'
+
+        Returns:
+            DataFrame with OHLCV data
         """
-        if len(klines) < self.window + 10:
-            return np.array([])
+        if trend == 'bullish':
+            drift = 0.001
+            volatility = 0.015
+        elif trend == 'bearish':
+            drift = -0.001
+            volatility = 0.02
+        else:  # sideways
+            drift = 0.0
+            volatility = 0.01
 
-        closes = np.array([k.close for k in klines])
-        volumes = np.array([k.volume for k in klines])
-
-        # Compute individual features
-        returns_1 = self._compute_returns(closes, 1)
-        returns_5 = self._compute_returns(closes, 5)
-        returns_10 = self._compute_returns(closes, 10)
-        sma_ratio = self._compute_sma_ratio(closes)
-        ema_ratio = self._compute_ema_ratio(closes)
-        volatility = self._compute_volatility(closes)
-        momentum = self._compute_momentum(closes)
-        rsi = self._compute_rsi(closes)
-        macd = self._compute_macd(closes)
-        bb_position = self._compute_bollinger_position(closes)
-        volume_sma_ratio = self._compute_volume_sma_ratio(volumes)
-
-        # Find common length
-        min_len = min(
-            len(returns_1), len(returns_5), len(returns_10),
-            len(sma_ratio), len(ema_ratio), len(volatility),
-            len(momentum), len(rsi), len(macd), len(bb_position),
-            len(volume_sma_ratio)
+        return SimulatedDataGenerator.generate_random_walk(
+            n_periods, base_price, volatility, drift
         )
 
-        if min_len == 0:
-            return np.array([])
+    @staticmethod
+    def generate_regime_changes(
+        n_periods: int,
+        base_price: float = 100.0,
+        regimes: Optional[List[Tuple[int, str]]] = None
+    ) -> pd.DataFrame:
+        """
+        Generate data with changing market regimes.
 
-        # Stack features
-        features = np.column_stack([
-            returns_1[-min_len:],
-            returns_5[-min_len:],
-            returns_10[-min_len:],
-            sma_ratio[-min_len:],
-            ema_ratio[-min_len:],
-            volatility[-min_len:],
-            momentum[-min_len:],
-            rsi[-min_len:],
-            macd[-min_len:],
-            bb_position[-min_len:],
-            volume_sma_ratio[-min_len:]
-        ])
+        Args:
+            n_periods: Total number of periods
+            base_price: Starting price
+            regimes: List of (duration, regime_type) tuples
 
-        return features
+        Returns:
+            DataFrame with OHLCV data
+        """
+        if regimes is None:
+            regimes = [
+                (int(n_periods * 0.3), 'bullish'),
+                (int(n_periods * 0.2), 'bearish'),
+                (int(n_periods * 0.25), 'sideways'),
+                (int(n_periods * 0.25), 'bullish')
+            ]
 
-    def _compute_returns(self, closes: np.ndarray, period: int) -> np.ndarray:
-        """Compute percentage returns over given period."""
-        if len(closes) <= period:
-            return np.array([])
-        returns = closes[period:] / closes[:-period] - 1
-        return returns
+        all_dfs = []
+        current_price = base_price
 
-    def _compute_sma_ratio(self, closes: np.ndarray) -> np.ndarray:
-        """Compute ratio of price to SMA."""
-        if len(closes) < self.window:
-            return np.array([])
-        sma = np.convolve(closes, np.ones(self.window)/self.window, mode='valid')
-        ratio = closes[self.window-1:] / sma - 1
-        return ratio
+        for duration, regime in regimes:
+            df = SimulatedDataGenerator.generate_trending_data(
+                duration, current_price, regime
+            )
+            all_dfs.append(df)
+            current_price = df['close'].iloc[-1]
 
-    def _compute_ema_ratio(self, closes: np.ndarray) -> np.ndarray:
-        """Compute ratio of price to EMA."""
-        if len(closes) < self.window:
-            return np.array([])
+        combined = pd.concat(all_dfs)
+        combined = combined.iloc[:n_periods]  # Ensure exact length
 
-        alpha = 2 / (self.window + 1)
-        ema = np.zeros(len(closes))
-        ema[0] = closes[0]
+        # Reset timestamps
+        start_date = datetime.now() - timedelta(days=len(combined))
+        combined.index = pd.date_range(start=start_date, periods=len(combined), freq='D')
 
-        for i in range(1, len(closes)):
-            ema[i] = alpha * closes[i] + (1 - alpha) * ema[i-1]
-
-        ratio = closes / ema - 1
-        return ratio[self.window-1:]
-
-    def _compute_volatility(self, closes: np.ndarray) -> np.ndarray:
-        """Compute rolling volatility."""
-        if len(closes) < self.window + 1:
-            return np.array([])
-
-        returns = np.diff(np.log(closes))
-        volatility = np.array([
-            np.std(returns[max(0, i-self.window+1):i+1])
-            for i in range(self.window-1, len(returns))
-        ])
-        return volatility
-
-    def _compute_momentum(self, closes: np.ndarray) -> np.ndarray:
-        """Compute price momentum."""
-        if len(closes) < self.window:
-            return np.array([])
-        momentum = closes[self.window-1:] / closes[:-self.window+1] - 1
-        return momentum[:-1] if len(momentum) > 1 else momentum
-
-    def _compute_rsi(self, closes: np.ndarray, period: int = 14) -> np.ndarray:
-        """Compute Relative Strength Index."""
-        if len(closes) < period + 1:
-            return np.array([])
-
-        deltas = np.diff(closes)
-        gains = np.where(deltas > 0, deltas, 0)
-        losses = np.where(deltas < 0, -deltas, 0)
-
-        avg_gain = np.convolve(gains, np.ones(period)/period, mode='valid')
-        avg_loss = np.convolve(losses, np.ones(period)/period, mode='valid')
-
-        rs = np.where(avg_loss != 0, avg_gain / avg_loss, 100)
-        rsi = 100 - (100 / (1 + rs))
-
-        return rsi / 100  # Normalize to [0, 1]
-
-    def _compute_macd(self, closes: np.ndarray) -> np.ndarray:
-        """Compute MACD normalized."""
-        if len(closes) < 26:
-            return np.array([])
-
-        # EMA 12
-        alpha12 = 2 / 13
-        ema12 = np.zeros(len(closes))
-        ema12[0] = closes[0]
-        for i in range(1, len(closes)):
-            ema12[i] = alpha12 * closes[i] + (1 - alpha12) * ema12[i-1]
-
-        # EMA 26
-        alpha26 = 2 / 27
-        ema26 = np.zeros(len(closes))
-        ema26[0] = closes[0]
-        for i in range(1, len(closes)):
-            ema26[i] = alpha26 * closes[i] + (1 - alpha26) * ema26[i-1]
-
-        macd = (ema12 - ema26) / closes
-        return macd[25:]
-
-    def _compute_bollinger_position(self, closes: np.ndarray) -> np.ndarray:
-        """Compute position within Bollinger Bands."""
-        if len(closes) < self.window:
-            return np.array([])
-
-        positions = []
-        for i in range(self.window - 1, len(closes)):
-            window_data = closes[i-self.window+1:i+1]
-            mean = np.mean(window_data)
-            std = np.std(window_data)
-            if std > 0:
-                position = (closes[i] - mean) / (2 * std)
-            else:
-                position = 0
-            positions.append(position)
-
-        return np.array(positions)
-
-    def _compute_volume_sma_ratio(self, volumes: np.ndarray) -> np.ndarray:
-        """Compute ratio of volume to its SMA."""
-        if len(volumes) < self.window:
-            return np.array([])
-
-        sma = np.convolve(volumes, np.ones(self.window)/self.window, mode='valid')
-        ratio = volumes[self.window-1:] / np.where(sma != 0, sma, 1) - 1
-        return ratio
+        return combined
 
 
-def create_trading_features(prices: np.ndarray, window: int = 20) -> np.ndarray:
-    """
-    Create technical features from price array.
-
-    Args:
-        prices: Array of prices
-        window: Lookback window
-
-    Returns:
-        Feature array
-    """
-    # Create dummy klines for the feature generator
-    klines = [
-        Kline(
-            timestamp=i * 3600000,
-            open=prices[i],
-            high=prices[i] * 1.001,
-            low=prices[i] * 0.999,
-            close=prices[i],
-            volume=1000000,
-            turnover=prices[i] * 1000000
-        )
-        for i in range(len(prices))
-    ]
-
-    generator = FeatureGenerator(window=window)
-    return generator.compute_features(klines)
-
-
-def klines_to_dataframe(klines: List[Kline]) -> pd.DataFrame:
-    """Convert list of Klines to pandas DataFrame."""
-    return pd.DataFrame([k.to_dict() for k in klines])
-
-
-def prepare_training_data(
+def create_features_from_prices(
     prices: np.ndarray,
-    features: np.ndarray,
-    target_horizon: int = 5,
-    train_ratio: float = 0.8
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    window: int = 20
+) -> Tuple[np.ndarray, List[str]]:
     """
-    Prepare training and test data.
+    Create feature array from price series.
+
+    Convenience function for creating features without a full DataFrame.
 
     Args:
-        prices: Price array
-        features: Feature array
-        target_horizon: Prediction horizon
-        train_ratio: Fraction for training
+        prices: Array of close prices
+        window: Lookback window for indicators
 
     Returns:
-        X_train, y_train, X_test, y_test
+        Tuple of (features array, feature names list)
     """
-    # Align features with prices (features start later due to lookback)
-    offset = len(prices) - len(features)
-    aligned_prices = prices[offset:]
+    # Create DataFrame
+    df = pd.DataFrame({
+        'open': prices,
+        'high': prices * 1.001,
+        'low': prices * 0.999,
+        'close': prices,
+        'volume': np.ones_like(prices) * 1000000
+    })
 
-    # Create target: future returns
-    target = np.zeros(len(aligned_prices))
-    target[:-target_horizon] = (
-        aligned_prices[target_horizon:] - aligned_prices[:-target_horizon]
-    ) / aligned_prices[:-target_horizon]
+    loader = StockDataLoader()
+    return loader.prepare_features(df)
 
-    # Remove last rows where target is invalid
-    valid_len = len(features) - target_horizon
-    X = features[:valid_len]
-    y = target[:valid_len]
 
-    # Remove any NaN
-    valid_mask = ~(np.isnan(X).any(axis=1) | np.isnan(y))
-    X = X[valid_mask]
-    y = y[valid_mask]
+def normalize_features(
+    features: np.ndarray,
+    method: str = 'zscore',
+    fit_data: Optional[np.ndarray] = None
+) -> Tuple[np.ndarray, Dict]:
+    """
+    Normalize feature values.
 
-    # Split
-    split_idx = int(len(X) * train_ratio)
-    X_train, X_test = X[:split_idx], X[split_idx:]
-    y_train, y_test = y[:split_idx], y[split_idx:]
+    Args:
+        features: Feature array to normalize
+        method: 'zscore', 'minmax', or 'robust'
+        fit_data: Data to fit normalizer on (None = use features)
 
-    return X_train, y_train, X_test, y_test
+    Returns:
+        Tuple of (normalized features, normalization parameters)
+    """
+    if fit_data is None:
+        fit_data = features
+
+    params = {}
+
+    if method == 'zscore':
+        params['mean'] = np.mean(fit_data, axis=0)
+        params['std'] = np.std(fit_data, axis=0) + 1e-10
+        normalized = (features - params['mean']) / params['std']
+
+    elif method == 'minmax':
+        params['min'] = np.min(fit_data, axis=0)
+        params['max'] = np.max(fit_data, axis=0)
+        range_val = params['max'] - params['min'] + 1e-10
+        normalized = (features - params['min']) / range_val
+
+    elif method == 'robust':
+        params['median'] = np.median(fit_data, axis=0)
+        params['iqr'] = np.percentile(fit_data, 75, axis=0) - np.percentile(fit_data, 25, axis=0) + 1e-10
+        normalized = (features - params['median']) / params['iqr']
+
+    else:
+        raise ValueError(f"Unknown normalization method: {method}")
+
+    params['method'] = method
+    return normalized, params
+
+
+def apply_normalization(features: np.ndarray, params: Dict) -> np.ndarray:
+    """
+    Apply pre-computed normalization parameters.
+
+    Args:
+        features: Features to normalize
+        params: Normalization parameters from normalize_features
+
+    Returns:
+        Normalized features
+    """
+    method = params.get('method', 'zscore')
+
+    if method == 'zscore':
+        return (features - params['mean']) / params['std']
+    elif method == 'minmax':
+        return (features - params['min']) / (params['max'] - params['min'] + 1e-10)
+    elif method == 'robust':
+        return (features - params['median']) / params['iqr']
+    else:
+        raise ValueError(f"Unknown normalization method: {method}")
 
 
 if __name__ == "__main__":
-    # Example usage
-    print("Generating simulated data...")
-    klines = SimulatedDataGenerator.generate_regime_changing_klines(500)
-    print(f"Generated {len(klines)} klines")
+    print("Data Loader Demo")
+    print("=" * 60)
 
-    print("\nComputing features...")
-    feature_gen = FeatureGenerator(window=20)
-    features = feature_gen.compute_features(klines)
-    print(f"Computed features shape: {features.shape}")
+    # Demo 1: Simulated data
+    print("\n1. Simulated Data Generation")
+    print("-" * 40)
 
-    print("\nFeature statistics:")
-    feature_names = [
-        "returns_1d", "returns_5d", "returns_10d", "sma_ratio", "ema_ratio",
-        "volatility", "momentum", "rsi", "macd", "bb_position", "volume_sma_ratio"
-    ]
-    for i, name in enumerate(feature_names):
-        print(f"  {name}: mean={features[:, i].mean():.6f}, std={features[:, i].std():.6f}")
+    sim_data = SimulatedDataGenerator.generate_regime_changes(500)
+    print(f"Generated {len(sim_data)} periods of simulated data")
+    print(f"Price range: ${sim_data['close'].min():.2f} - ${sim_data['close'].max():.2f}")
+
+    # Prepare features from simulated data
+    stock_loader = StockDataLoader()
+    features, feature_names = stock_loader.prepare_features(sim_data)
+    print(f"\nComputed {len(feature_names)} features:")
+    for name in feature_names[:10]:
+        print(f"  - {name}")
+    if len(feature_names) > 10:
+        print(f"  ... and {len(feature_names) - 10} more")
+
+    print(f"\nFeature shape: {features.shape}")
+
+    # Demo 2: Train/test split
+    print("\n2. Train/Test Split")
+    print("-" * 40)
+
+    X_train, y_train, X_test, y_test, names = stock_loader.get_train_test_split(
+        sim_data,
+        target_horizon=5,
+        train_ratio=0.8
+    )
+
+    print(f"Training samples: {len(X_train)}")
+    print(f"Test samples: {len(X_test)}")
+    print(f"Class distribution (train):")
+    print(f"  SELL (0): {(y_train == 0).sum()}")
+    print(f"  HOLD (1): {(y_train == 1).sum()}")
+    print(f"  BUY (2):  {(y_train == 2).sum()}")
+
+    # Demo 3: Feature normalization
+    print("\n3. Feature Normalization")
+    print("-" * 40)
+
+    X_train_norm, norm_params = normalize_features(X_train, method='zscore')
+    X_test_norm = apply_normalization(X_test, norm_params)
+
+    print(f"Before normalization - mean: {X_train.mean():.4f}, std: {X_train.std():.4f}")
+    print(f"After normalization - mean: {X_train_norm.mean():.4f}, std: {X_train_norm.std():.4f}")
+
+    # Demo 4: Try to fetch real data (may fail without internet/API)
+    print("\n4. Real Data Fetching (Demo)")
+    print("-" * 40)
+
+    # Try Bybit API
+    try:
+        bybit_loader = BybitDataLoader()
+        btc_data = bybit_loader.fetch_data('BTCUSDT', interval='60', limit=100)
+        print(f"Fetched {len(btc_data)} klines from Bybit")
+        print(f"Latest BTC price: ${btc_data['close'].iloc[-1]:,.2f}")
+    except Exception as e:
+        print(f"Bybit fetch failed (expected if no internet): {e}")
+
+    # Try yfinance
+    try:
+        stock_loader = StockDataLoader()
+        aapl_data = stock_loader.fetch_data('AAPL', period='1mo', interval='1d')
+        print(f"Fetched {len(aapl_data)} days of AAPL data")
+        print(f"Latest AAPL price: ${aapl_data['close'].iloc[-1]:.2f}")
+    except Exception as e:
+        print(f"yfinance fetch failed: {e}")
+
+    print("\nDemo complete!")

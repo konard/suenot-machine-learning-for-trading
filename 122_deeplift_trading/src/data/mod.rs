@@ -1,7 +1,8 @@
-//! Data loading and feature engineering.
+//! # Data Module
+//!
+//! This module provides data fetching and preprocessing functionality
+//! for the DeepLift trading system.
 
 pub mod bybit;
-pub mod features;
 
 pub use bybit::BybitClient;
-pub use features::FeatureGenerator;

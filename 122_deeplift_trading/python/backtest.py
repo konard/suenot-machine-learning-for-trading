@@ -1,141 +1,264 @@
 """
-Backtesting framework with DeepLIFT explanations.
+Backtesting framework with DeepLift attribution analysis.
 
 This module provides:
-- DeepLIFTBacktester: Backtesting with explanation logging
-- calculate_metrics: Performance metric calculation
+- Backtester: Main backtesting class with run_backtest() method
+- Performance metrics: Sharpe Ratio, Sortino Ratio, Max Drawdown, Win Rate
+- Baseline strategy comparison (Buy & Hold)
+- Attribution analysis during backtesting
 """
 
 import torch
 import torch.nn as nn
 import numpy as np
 import pandas as pd
-from typing import List, Dict, Optional
-from dataclasses import dataclass
+from typing import List, Dict, Optional, Tuple, Any
+from dataclasses import dataclass, field
+from datetime import datetime
 import logging
-
-from .deeplift_trader import DeepLIFT, Attribution
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class BacktestResult:
-    """Results from a backtest run."""
-    results_df: pd.DataFrame
-    metrics: Dict[str, float]
-    feature_importance: Dict[str, float]
-
-
-class DeepLIFTBacktester:
+class PerformanceMetrics:
     """
-    Backtesting framework with DeepLIFT explanations.
+    Performance metrics for a trading strategy.
 
-    Logs which features contributed to each trading decision,
-    enabling analysis of strategy behavior over time.
+    Attributes:
+        total_return: Total percentage return
+        annualized_return: Annualized return
+        annualized_volatility: Annualized volatility
+        sharpe_ratio: Risk-adjusted return (excess return / volatility)
+        sortino_ratio: Downside risk-adjusted return
+        max_drawdown: Maximum peak-to-trough decline
+        win_rate: Percentage of profitable trades
+        profit_factor: Gross profit / Gross loss
+        num_trades: Total number of trades executed
+        avg_trade_return: Average return per trade
+        avg_win: Average winning trade return
+        avg_loss: Average losing trade return
+        max_consecutive_wins: Longest winning streak
+        max_consecutive_losses: Longest losing streak
+        calmar_ratio: Annualized return / Max drawdown
+    """
+    total_return: float = 0.0
+    annualized_return: float = 0.0
+    annualized_volatility: float = 0.0
+    sharpe_ratio: float = 0.0
+    sortino_ratio: float = 0.0
+    max_drawdown: float = 0.0
+    win_rate: float = 0.0
+    profit_factor: float = 0.0
+    num_trades: int = 0
+    avg_trade_return: float = 0.0
+    avg_win: float = 0.0
+    avg_loss: float = 0.0
+    max_consecutive_wins: int = 0
+    max_consecutive_losses: int = 0
+    calmar_ratio: float = 0.0
+
+    def to_dict(self) -> Dict[str, float]:
+        """Convert to dictionary."""
+        return {
+            'total_return': self.total_return,
+            'annualized_return': self.annualized_return,
+            'annualized_volatility': self.annualized_volatility,
+            'sharpe_ratio': self.sharpe_ratio,
+            'sortino_ratio': self.sortino_ratio,
+            'max_drawdown': self.max_drawdown,
+            'win_rate': self.win_rate,
+            'profit_factor': self.profit_factor,
+            'num_trades': self.num_trades,
+            'avg_trade_return': self.avg_trade_return,
+            'avg_win': self.avg_win,
+            'avg_loss': self.avg_loss,
+            'max_consecutive_wins': self.max_consecutive_wins,
+            'max_consecutive_losses': self.max_consecutive_losses,
+            'calmar_ratio': self.calmar_ratio,
+        }
+
+
+@dataclass
+class BacktestResult:
+    """
+    Complete results from a backtest run.
+
+    Attributes:
+        results_df: DataFrame with detailed trade history
+        metrics: Performance metrics
+        baseline_metrics: Buy & Hold baseline metrics
+        feature_importance: Average feature importance from attributions
+        attribution_history: List of attributions for each decision
+    """
+    results_df: pd.DataFrame
+    metrics: PerformanceMetrics
+    baseline_metrics: Optional[PerformanceMetrics] = None
+    feature_importance: Dict[str, float] = field(default_factory=dict)
+    attribution_history: List[Dict] = field(default_factory=list)
+
+
+class Backtester:
+    """
+    Backtesting framework with DeepLift attribution analysis.
+
+    Runs a trading strategy simulation with:
+    - Transaction cost modeling
+    - Position management (Long, Hold, Short)
+    - Performance metric calculation
+    - Feature attribution logging
+    - Baseline strategy comparison
+
+    Example:
+        >>> backtester = Backtester(
+        ...     model=trained_model,
+        ...     explainer=deeplift_explainer,
+        ...     feature_names=feature_names,
+        ...     transaction_cost=0.001
+        ... )
+        >>> result = backtester.run_backtest(prices, features)
+        >>> print(result.metrics.sharpe_ratio)
     """
 
     def __init__(
         self,
         model: nn.Module,
-        explainer: DeepLIFT,
-        feature_names: List[str],
-        prediction_threshold: float = 0.001,
-        transaction_cost: float = 0.001
+        explainer: Optional[Any] = None,
+        feature_names: Optional[List[str]] = None,
+        transaction_cost: float = 0.001,
+        slippage: float = 0.0005,
+        initial_capital: float = 10000.0,
+        periods_per_year: int = 252,
+        risk_free_rate: float = 0.02
     ):
         """
-        Initialize backtester.
+        Initialize Backtester.
 
         Args:
-            model: Trained trading model
-            explainer: DeepLIFT explainer instance
+            model: Trained trading model (TradingNetwork)
+            explainer: DeepLiftTrading explainer (optional)
             feature_names: Names of input features
-            prediction_threshold: Threshold for trading signals
-            transaction_cost: Cost per transaction (as fraction)
+            transaction_cost: Cost per transaction as fraction (e.g., 0.001 = 0.1%)
+            slippage: Slippage as fraction of price
+            initial_capital: Starting capital
+            periods_per_year: Number of trading periods per year (252 for daily, 8760 for hourly)
+            risk_free_rate: Annual risk-free rate for Sharpe ratio calculation
         """
         self.model = model
         self.explainer = explainer
-        self.feature_names = feature_names
-        self.threshold = prediction_threshold
+        self.feature_names = feature_names or []
         self.transaction_cost = transaction_cost
+        self.slippage = slippage
+        self.initial_capital = initial_capital
+        self.periods_per_year = periods_per_year
+        self.risk_free_rate = risk_free_rate
 
-    def backtest(
+    def run_backtest(
         self,
         prices: np.ndarray,
         features: np.ndarray,
-        initial_capital: float = 10000.0,
-        log_explanations: bool = True
+        compute_attributions: bool = True,
+        compute_baseline: bool = True
     ) -> BacktestResult:
         """
-        Run backtest with explanation logging.
+        Run backtest with attribution analysis.
 
         Args:
             prices: Price array (should align with features)
-            features: Feature array
-            initial_capital: Starting capital
-            log_explanations: Whether to compute and log explanations
+            features: Feature array of shape (n_samples, n_features)
+            compute_attributions: Whether to compute DeepLift attributions
+            compute_baseline: Whether to compute Buy & Hold baseline
 
         Returns:
-            BacktestResult with DataFrame, metrics, and feature importance
+            BacktestResult with metrics and trade history
         """
-        results = []
-        capital = initial_capital
-        position = 0  # -1 (short), 0 (neutral), 1 (long)
+        n = min(len(prices), len(features))
+        prices = prices[:n]
+        features = features[:n]
 
-        # Track feature importance over time
-        importance_sum = np.zeros(len(self.feature_names))
+        # Initialize tracking variables
+        capital = self.initial_capital
+        position = 0  # -1 (short), 0 (neutral), 1 (long)
+        entry_price = 0.0
+
+        results = []
+        attribution_history = []
+        importance_sum = np.zeros(len(self.feature_names)) if self.feature_names else np.array([])
         n_attributions = 0
 
         self.model.eval()
 
-        # Ensure prices and features are aligned
-        n = min(len(prices), len(features))
-
-        for i in range(n):
+        for i in range(n - 1):
             input_tensor = torch.FloatTensor(features[i:i+1])
 
+            # Get prediction
             with torch.no_grad():
-                prediction = self.model(input_tensor).item()
+                logits = self.model(input_tensor)
+                probs = torch.softmax(logits, dim=-1).squeeze().numpy()
+                predicted_class = torch.argmax(logits, dim=-1).item()
 
-            # Get explanation if requested
+            # Convert class to signal: 0->-1 (Sell), 1->0 (Hold), 2->1 (Buy)
+            signal = predicted_class - 1
+
+            # Compute attribution if requested
             top_features = []
-            if log_explanations:
-                attribution = self.explainer.attribute(input_tensor, self.feature_names)
-                top_features = attribution.top_features(3)
-                importance_sum += np.abs(attribution.scores)
-                n_attributions += 1
+            if compute_attributions and self.explainer is not None and self.feature_names:
+                try:
+                    attribution = self.explainer.get_attributions(
+                        input_tensor,
+                        feature_names=self.feature_names
+                    )
+                    top_features = attribution.top_features(5)
+                    importance_sum += np.abs(attribution.attributions)
+                    n_attributions += 1
 
-            # Trading logic
-            if prediction > self.threshold:
-                new_position = 1  # Long
-            elif prediction < -self.threshold:
-                new_position = -1  # Short
-            else:
-                new_position = 0  # Neutral
+                    attribution_history.append({
+                        'index': i,
+                        'signal': signal,
+                        'top_features': top_features,
+                        'attributions': attribution.attributions.tolist()
+                    })
+                except Exception as e:
+                    logger.warning(f"Attribution computation failed at step {i}: {e}")
 
-            # Transaction costs
-            if new_position != position and i > 0:
-                capital *= (1 - self.transaction_cost)
+            # Determine new position
+            new_position = signal
+
+            # Calculate transaction costs
+            position_change = abs(new_position - position)
+            cost = 0.0
+            if position_change > 0:
+                cost = capital * self.transaction_cost * position_change
+                cost += capital * self.slippage * position_change
 
             # Calculate returns
-            if i < n - 1:
-                actual_return = prices[i+1] / prices[i] - 1
-                position_return = position * actual_return
-                capital *= (1 + position_return)
-            else:
-                actual_return = 0
-                position_return = 0
+            price_return = (prices[i + 1] - prices[i]) / prices[i]
+            position_return = position * price_return
 
+            # Update capital
+            old_capital = capital
+            capital = capital * (1 + position_return) - cost
+
+            # Track entry for trade analysis
+            if position == 0 and new_position != 0:
+                entry_price = prices[i]
+
+            # Record result
             result = {
                 'index': i,
+                'timestamp': i,  # Can be replaced with actual timestamp
                 'price': prices[i],
-                'prediction': prediction,
+                'signal': signal,
                 'position': position,
                 'new_position': new_position,
-                'actual_return': actual_return,
+                'price_return': price_return,
                 'position_return': position_return,
+                'transaction_cost': cost,
                 'capital': capital,
+                'prob_sell': probs[0],
+                'prob_hold': probs[1],
+                'prob_buy': probs[2],
             }
 
             # Add top feature information
@@ -150,228 +273,447 @@ class DeepLIFTBacktester:
         results_df = pd.DataFrame(results)
 
         # Calculate metrics
-        metrics = calculate_metrics(results_df)
+        metrics = self._calculate_metrics(results_df)
+
+        # Calculate baseline (Buy & Hold) metrics
+        baseline_metrics = None
+        if compute_baseline:
+            baseline_metrics = self._calculate_baseline_metrics(prices)
 
         # Average feature importance
         feature_importance = {}
-        if n_attributions > 0:
+        if n_attributions > 0 and len(self.feature_names) > 0:
             avg_importance = importance_sum / n_attributions
-            feature_importance = dict(zip(self.feature_names, avg_importance))
+            feature_importance = dict(zip(self.feature_names, avg_importance.tolist()))
 
         return BacktestResult(
             results_df=results_df,
             metrics=metrics,
-            feature_importance=feature_importance
+            baseline_metrics=baseline_metrics,
+            feature_importance=feature_importance,
+            attribution_history=attribution_history
         )
 
-    def analyze_regime_attributions(
+    def _calculate_metrics(self, df: pd.DataFrame) -> PerformanceMetrics:
+        """Calculate performance metrics from backtest results."""
+        if len(df) == 0:
+            return PerformanceMetrics()
+
+        returns = df['position_return'].values
+
+        # Total return
+        final_capital = df['capital'].iloc[-1]
+        initial_capital = self.initial_capital
+        total_return = (final_capital / initial_capital) - 1
+
+        # Annualized metrics
+        n_periods = len(returns)
+        ann_factor = self.periods_per_year / max(n_periods, 1)
+
+        ann_return = (1 + total_return) ** ann_factor - 1
+        ann_volatility = np.std(returns) * np.sqrt(self.periods_per_year) if np.std(returns) > 0 else 0
+
+        # Sharpe Ratio
+        excess_return = np.mean(returns) - self.risk_free_rate / self.periods_per_year
+        sharpe = (excess_return / (np.std(returns) + 1e-10)) * np.sqrt(self.periods_per_year)
+
+        # Sortino Ratio (downside deviation)
+        downside_returns = returns[returns < 0]
+        downside_std = np.std(downside_returns) if len(downside_returns) > 0 else 1e-10
+        sortino = (excess_return / (downside_std + 1e-10)) * np.sqrt(self.periods_per_year)
+
+        # Maximum Drawdown
+        cumulative = (1 + pd.Series(returns)).cumprod()
+        rolling_max = cumulative.expanding().max()
+        drawdowns = cumulative / rolling_max - 1
+        max_drawdown = drawdowns.min()
+
+        # Trade analysis
+        trades = df[df['position'] != df['new_position'].shift(1)]
+        num_trades = len(trades)
+
+        # Win rate
+        trade_returns = returns[returns != 0]
+        wins = (trade_returns > 0).sum()
+        losses = (trade_returns < 0).sum()
+        win_rate = wins / max(wins + losses, 1)
+
+        # Average returns
+        avg_trade_return = np.mean(trade_returns) if len(trade_returns) > 0 else 0
+        avg_win = np.mean(trade_returns[trade_returns > 0]) if wins > 0 else 0
+        avg_loss = np.mean(trade_returns[trade_returns < 0]) if losses > 0 else 0
+
+        # Profit factor
+        gross_profit = np.sum(trade_returns[trade_returns > 0])
+        gross_loss = np.abs(np.sum(trade_returns[trade_returns < 0]))
+        profit_factor = gross_profit / max(gross_loss, 1e-10)
+
+        # Consecutive wins/losses
+        max_consecutive_wins, max_consecutive_losses = self._calculate_streaks(trade_returns)
+
+        # Calmar Ratio
+        calmar = ann_return / abs(max_drawdown) if max_drawdown != 0 else 0
+
+        return PerformanceMetrics(
+            total_return=total_return,
+            annualized_return=ann_return,
+            annualized_volatility=ann_volatility,
+            sharpe_ratio=sharpe,
+            sortino_ratio=sortino,
+            max_drawdown=max_drawdown,
+            win_rate=win_rate,
+            profit_factor=profit_factor,
+            num_trades=num_trades,
+            avg_trade_return=avg_trade_return,
+            avg_win=avg_win,
+            avg_loss=avg_loss,
+            max_consecutive_wins=max_consecutive_wins,
+            max_consecutive_losses=max_consecutive_losses,
+            calmar_ratio=calmar
+        )
+
+    def _calculate_baseline_metrics(self, prices: np.ndarray) -> PerformanceMetrics:
+        """Calculate Buy & Hold baseline metrics."""
+        returns = np.diff(prices) / prices[:-1]
+
+        total_return = (prices[-1] / prices[0]) - 1
+
+        n_periods = len(returns)
+        ann_factor = self.periods_per_year / max(n_periods, 1)
+
+        ann_return = (1 + total_return) ** ann_factor - 1
+        ann_volatility = np.std(returns) * np.sqrt(self.periods_per_year) if np.std(returns) > 0 else 0
+
+        excess_return = np.mean(returns) - self.risk_free_rate / self.periods_per_year
+        sharpe = (excess_return / (np.std(returns) + 1e-10)) * np.sqrt(self.periods_per_year)
+
+        downside_returns = returns[returns < 0]
+        downside_std = np.std(downside_returns) if len(downside_returns) > 0 else 1e-10
+        sortino = (excess_return / (downside_std + 1e-10)) * np.sqrt(self.periods_per_year)
+
+        cumulative = (1 + pd.Series(returns)).cumprod()
+        rolling_max = cumulative.expanding().max()
+        drawdowns = cumulative / rolling_max - 1
+        max_drawdown = drawdowns.min()
+
+        wins = (returns > 0).sum()
+        losses = (returns < 0).sum()
+        win_rate = wins / max(wins + losses, 1)
+
+        gross_profit = np.sum(returns[returns > 0])
+        gross_loss = np.abs(np.sum(returns[returns < 0]))
+        profit_factor = gross_profit / max(gross_loss, 1e-10)
+
+        calmar = ann_return / abs(max_drawdown) if max_drawdown != 0 else 0
+
+        return PerformanceMetrics(
+            total_return=total_return,
+            annualized_return=ann_return,
+            annualized_volatility=ann_volatility,
+            sharpe_ratio=sharpe,
+            sortino_ratio=sortino,
+            max_drawdown=max_drawdown,
+            win_rate=win_rate,
+            profit_factor=profit_factor,
+            num_trades=1,  # Buy & Hold is one trade
+            calmar_ratio=calmar
+        )
+
+    @staticmethod
+    def _calculate_streaks(returns: np.ndarray) -> Tuple[int, int]:
+        """Calculate maximum consecutive wins and losses."""
+        if len(returns) == 0:
+            return 0, 0
+
+        max_wins = 0
+        max_losses = 0
+        current_wins = 0
+        current_losses = 0
+
+        for r in returns:
+            if r > 0:
+                current_wins += 1
+                current_losses = 0
+                max_wins = max(max_wins, current_wins)
+            elif r < 0:
+                current_losses += 1
+                current_wins = 0
+                max_losses = max(max_losses, current_losses)
+            else:
+                current_wins = 0
+                current_losses = 0
+
+        return max_wins, max_losses
+
+    def analyze_attributions_by_outcome(
         self,
-        results: BacktestResult,
-        regime_column: Optional[str] = None
+        result: BacktestResult
     ) -> Dict[str, Dict[str, float]]:
         """
-        Analyze feature importance by market regime.
+        Analyze feature importance segmented by trade outcome.
 
         Args:
-            results: BacktestResult from backtest
-            regime_column: Column indicating regime (if None, uses returns sign)
+            result: BacktestResult from run_backtest
 
         Returns:
-            Dictionary mapping regime to feature importance
+            Dictionary with 'winning' and 'losing' trade feature importance
         """
-        df = results.results_df.copy()
+        if not result.attribution_history or not self.feature_names:
+            return {}
 
-        # Create regime if not provided
-        if regime_column is None:
-            # Use rolling return direction as regime
-            df['regime'] = np.where(
-                df['actual_return'].rolling(10).mean() > 0,
-                'bullish',
-                'bearish'
-            )
-        else:
-            df['regime'] = df[regime_column]
+        df = result.results_df
+        winning_importance = np.zeros(len(self.feature_names))
+        losing_importance = np.zeros(len(self.feature_names))
+        n_winning = 0
+        n_losing = 0
 
-        regime_importance = {}
+        for attr_record in result.attribution_history:
+            idx = attr_record['index']
+            if idx >= len(df):
+                continue
 
-        for regime in df['regime'].dropna().unique():
-            regime_df = df[df['regime'] == regime]
-            regime_importance[regime] = {}
+            position_return = df.iloc[idx]['position_return']
+            attributions = np.array(attr_record['attributions'])
 
-            # Collect scores for this regime
-            for feat in self.feature_names:
-                scores = []
-                for j in range(1, 4):
-                    mask = regime_df[f'top_feature_{j}'] == feat
-                    if mask.any():
-                        scores.extend(regime_df.loc[mask, f'top_score_{j}'].tolist())
+            if position_return > 0:
+                winning_importance += np.abs(attributions)
+                n_winning += 1
+            elif position_return < 0:
+                losing_importance += np.abs(attributions)
+                n_losing += 1
 
-                if scores:
-                    regime_importance[regime][feat] = np.mean(np.abs(scores))
-                else:
-                    regime_importance[regime][feat] = 0.0
+        result_dict = {}
 
-        return regime_importance
+        if n_winning > 0:
+            result_dict['winning'] = dict(zip(
+                self.feature_names,
+                (winning_importance / n_winning).tolist()
+            ))
+
+        if n_losing > 0:
+            result_dict['losing'] = dict(zip(
+                self.feature_names,
+                (losing_importance / n_losing).tolist()
+            ))
+
+        return result_dict
 
 
-def calculate_metrics(results: pd.DataFrame) -> Dict[str, float]:
+def print_backtest_report(result: BacktestResult, show_baseline: bool = True):
     """
-    Calculate trading performance metrics.
+    Print a formatted backtest report.
 
     Args:
-        results: DataFrame with backtest results
-
-    Returns:
-        Dictionary of performance metrics
+        result: BacktestResult from backtest
+        show_baseline: Whether to show Buy & Hold comparison
     """
-    returns = results['position_return']
+    print("\n" + "=" * 70)
+    print("                       BACKTEST REPORT")
+    print("=" * 70)
 
-    # Handle edge cases
-    if len(returns) == 0 or returns.std() == 0:
-        return {
-            'total_return': 0,
-            'annualized_return': 0,
-            'annualized_volatility': 0,
-            'sharpe_ratio': 0,
-            'sortino_ratio': 0,
-            'max_drawdown': 0,
-            'win_rate': 0,
-            'profit_factor': 0,
-            'num_trades': 0,
-        }
-
-    # Basic metrics
-    total_return = (results['capital'].iloc[-1] / results['capital'].iloc[0]) - 1
-
-    # Annualized metrics (assuming hourly data, ~8760 hours/year)
-    periods_per_year = 8760
-    ann_return = (1 + total_return) ** (periods_per_year / len(results)) - 1
-    ann_volatility = returns.std() * np.sqrt(periods_per_year)
-
-    # Risk-adjusted metrics
-    sharpe_ratio = np.sqrt(periods_per_year) * returns.mean() / (returns.std() + 1e-10)
-
-    downside_returns = returns[returns < 0]
-    if len(downside_returns) > 0:
-        sortino_ratio = np.sqrt(periods_per_year) * returns.mean() / (downside_returns.std() + 1e-10)
-    else:
-        sortino_ratio = np.inf
-
-    # Drawdown analysis
-    cumulative = (1 + returns).cumprod()
-    rolling_max = cumulative.expanding().max()
-    drawdowns = cumulative / rolling_max - 1
-    max_drawdown = drawdowns.min()
-
-    # Win rate
-    wins = (returns > 0).sum()
-    losses = (returns < 0).sum()
-    win_rate = wins / (wins + losses) if (wins + losses) > 0 else 0
-
-    # Profit factor
-    gross_profits = returns[returns > 0].sum()
-    gross_losses = abs(returns[returns < 0].sum())
-    profit_factor = gross_profits / (gross_losses + 1e-10)
-
-    # Number of trades (position changes)
-    num_trades = (results['position'] != results['position'].shift()).sum()
-
-    return {
-        'total_return': total_return,
-        'annualized_return': ann_return,
-        'annualized_volatility': ann_volatility,
-        'sharpe_ratio': sharpe_ratio,
-        'sortino_ratio': sortino_ratio,
-        'max_drawdown': max_drawdown,
-        'win_rate': win_rate,
-        'profit_factor': profit_factor,
-        'num_trades': num_trades,
-    }
-
-
-def print_backtest_report(result: BacktestResult):
-    """Print a formatted backtest report."""
-    print("\n" + "=" * 60)
-    print("BACKTEST REPORT")
-    print("=" * 60)
-
-    print("\nPerformance Metrics:")
-    print("-" * 40)
     metrics = result.metrics
-    print(f"  Total Return:        {metrics['total_return']*100:>10.2f}%")
-    print(f"  Annualized Return:   {metrics['annualized_return']*100:>10.2f}%")
-    print(f"  Annualized Vol:      {metrics['annualized_volatility']*100:>10.2f}%")
-    print(f"  Sharpe Ratio:        {metrics['sharpe_ratio']:>10.3f}")
-    print(f"  Sortino Ratio:       {metrics['sortino_ratio']:>10.3f}")
-    print(f"  Max Drawdown:        {metrics['max_drawdown']*100:>10.2f}%")
-    print(f"  Win Rate:            {metrics['win_rate']*100:>10.2f}%")
-    print(f"  Profit Factor:       {metrics['profit_factor']:>10.3f}")
-    print(f"  Number of Trades:    {metrics['num_trades']:>10.0f}")
+
+    print("\nStrategy Performance:")
+    print("-" * 50)
+    print(f"  Total Return:            {metrics.total_return * 100:>12.2f}%")
+    print(f"  Annualized Return:       {metrics.annualized_return * 100:>12.2f}%")
+    print(f"  Annualized Volatility:   {metrics.annualized_volatility * 100:>12.2f}%")
+    print(f"  Sharpe Ratio:            {metrics.sharpe_ratio:>12.3f}")
+    print(f"  Sortino Ratio:           {metrics.sortino_ratio:>12.3f}")
+    print(f"  Calmar Ratio:            {metrics.calmar_ratio:>12.3f}")
+    print(f"  Max Drawdown:            {metrics.max_drawdown * 100:>12.2f}%")
+
+    print("\nTrade Statistics:")
+    print("-" * 50)
+    print(f"  Number of Trades:        {metrics.num_trades:>12}")
+    print(f"  Win Rate:                {metrics.win_rate * 100:>12.2f}%")
+    print(f"  Profit Factor:           {metrics.profit_factor:>12.3f}")
+    print(f"  Avg Trade Return:        {metrics.avg_trade_return * 100:>12.4f}%")
+    print(f"  Avg Winning Trade:       {metrics.avg_win * 100:>12.4f}%")
+    print(f"  Avg Losing Trade:        {metrics.avg_loss * 100:>12.4f}%")
+    print(f"  Max Consecutive Wins:    {metrics.max_consecutive_wins:>12}")
+    print(f"  Max Consecutive Losses:  {metrics.max_consecutive_losses:>12}")
+
+    if show_baseline and result.baseline_metrics:
+        baseline = result.baseline_metrics
+        print("\nBuy & Hold Comparison:")
+        print("-" * 50)
+        print(f"  {'Metric':<25} {'Strategy':>12} {'Buy&Hold':>12} {'Diff':>10}")
+        print(f"  {'-' * 25} {'-' * 12} {'-' * 12} {'-' * 10}")
+
+        diff_return = metrics.total_return - baseline.total_return
+        print(f"  {'Total Return':<25} {metrics.total_return*100:>11.2f}% {baseline.total_return*100:>11.2f}% {diff_return*100:>9.2f}%")
+
+        diff_sharpe = metrics.sharpe_ratio - baseline.sharpe_ratio
+        print(f"  {'Sharpe Ratio':<25} {metrics.sharpe_ratio:>12.3f} {baseline.sharpe_ratio:>12.3f} {diff_sharpe:>10.3f}")
+
+        diff_dd = metrics.max_drawdown - baseline.max_drawdown
+        print(f"  {'Max Drawdown':<25} {metrics.max_drawdown*100:>11.2f}% {baseline.max_drawdown*100:>11.2f}% {diff_dd*100:>9.2f}%")
 
     if result.feature_importance:
-        print("\nFeature Importance (Average):")
-        print("-" * 40)
+        print("\nFeature Importance (Average Attribution):")
+        print("-" * 50)
         sorted_importance = sorted(
             result.feature_importance.items(),
             key=lambda x: x[1],
             reverse=True
         )
-        for name, score in sorted_importance:
-            print(f"  {name:<20} {score:.6f}")
+        for i, (name, score) in enumerate(sorted_importance[:10]):
+            bar_len = int(score * 50 / max(result.feature_importance.values()))
+            bar = "#" * bar_len
+            print(f"  {i+1:2}. {name:<20} {score:.6f} {bar}")
 
-    print("\n" + "=" * 60)
+    print("\n" + "=" * 70)
+
+
+def compare_strategies(
+    results: Dict[str, BacktestResult]
+) -> pd.DataFrame:
+    """
+    Compare multiple backtest results.
+
+    Args:
+        results: Dictionary mapping strategy names to BacktestResult
+
+    Returns:
+        DataFrame comparing all strategies
+    """
+    comparison = []
+
+    for name, result in results.items():
+        metrics = result.metrics
+        row = {
+            'Strategy': name,
+            'Total Return (%)': metrics.total_return * 100,
+            'Ann. Return (%)': metrics.annualized_return * 100,
+            'Sharpe': metrics.sharpe_ratio,
+            'Sortino': metrics.sortino_ratio,
+            'Max DD (%)': metrics.max_drawdown * 100,
+            'Win Rate (%)': metrics.win_rate * 100,
+            'Profit Factor': metrics.profit_factor,
+            'Num Trades': metrics.num_trades,
+        }
+        comparison.append(row)
+
+    df = pd.DataFrame(comparison)
+    df = df.set_index('Strategy')
+    return df
 
 
 if __name__ == "__main__":
-    # Example usage
-    import torch.nn as nn
-    from .deeplift_trader import TradingModelWithDeepLIFT, DeepLIFT
-    from .data_loader import SimulatedDataGenerator, FeatureGenerator
+    print("Backtesting Framework Demo")
+    print("=" * 60)
 
-    print("Running backtest example...")
+    # Import dependencies
+    from deeplift_model import TradingNetwork, DeepLiftTrading, create_labels_from_returns
+    from data_loader import SimulatedDataGenerator, StockDataLoader
 
     # Generate simulated data
-    klines = SimulatedDataGenerator.generate_regime_changing_klines(500)
-    feature_gen = FeatureGenerator(window=20)
-    features = feature_gen.compute_features(klines)
-    prices = np.array([k.close for k in klines])[-len(features):]
+    print("\n1. Generating simulated market data...")
+    sim_data = SimulatedDataGenerator.generate_regime_changes(500)
+    prices = sim_data['close'].values
 
-    feature_names = [
-        "returns_1d", "returns_5d", "returns_10d", "sma_ratio", "ema_ratio",
-        "volatility", "momentum", "rsi", "macd", "bb_position", "volume_sma_ratio"
-    ]
+    # Prepare features
+    print("2. Preparing features...")
+    loader = StockDataLoader()
+    features, feature_names = loader.prepare_features(sim_data)
 
-    # Create and train a simple model
-    model = TradingModelWithDeepLIFT(input_size=11, hidden_size=32)
+    # Align prices with features
+    prices = prices[-len(features):]
 
-    # Quick training
-    X = torch.FloatTensor(features[:-5])
-    y = torch.FloatTensor(
-        (prices[5:] - prices[:-5]) / prices[:-5]
-    )[-len(X):].unsqueeze(1)
+    # Create labels
+    target_horizon = 5
+    future_returns = np.zeros(len(prices))
+    future_returns[:-target_horizon] = (
+        prices[target_horizon:] - prices[:-target_horizon]
+    ) / prices[:-target_horizon]
 
+    labels = create_labels_from_returns(future_returns, buy_threshold=0.005, sell_threshold=-0.005)
+
+    # Trim to valid data
+    valid_len = len(features) - target_horizon
+    X = features[:valid_len]
+    y = labels[:valid_len]
+    prices_valid = prices[:valid_len + 1]  # +1 for return calculation
+
+    # Split data
+    train_size = int(0.7 * len(X))
+    X_train, X_test = X[:train_size], X[train_size:]
+    y_train, y_test = y[:train_size], y[train_size:]
+    prices_test = prices_valid[train_size:]
+
+    print(f"   Training samples: {len(X_train)}")
+    print(f"   Test samples: {len(X_test)}")
+
+    # Create and train model
+    print("\n3. Training model...")
+    model = TradingNetwork(
+        input_size=len(feature_names),
+        hidden_sizes=[64, 32],
+        num_classes=3,
+        dropout_rate=0.2
+    )
+
+    X_train_t = torch.FloatTensor(X_train)
+    y_train_t = torch.LongTensor(y_train)
+
+    criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    criterion = nn.MSELoss()
 
-    for _ in range(50):
+    model.train()
+    for epoch in range(100):
         optimizer.zero_grad()
-        pred = model(X)
-        loss = criterion(pred, y)
+        outputs = model(X_train_t)
+        loss = criterion(outputs, y_train_t)
         loss.backward()
         optimizer.step()
 
-    # Create explainer and backtester
-    reference = torch.FloatTensor(np.mean(features, axis=0, keepdims=True))
-    explainer = DeepLIFT(model, reference=reference)
-    backtester = DeepLIFTBacktester(
+        if epoch % 25 == 0:
+            acc = (torch.argmax(outputs, dim=1) == y_train_t).float().mean()
+            print(f"   Epoch {epoch:3d}: Loss={loss.item():.4f}, Acc={acc:.4f}")
+
+    # Create explainer
+    print("\n4. Setting up DeepLift explainer...")
+    explainer = DeepLiftTrading(model)
+    explainer.set_baseline_from_data(X_train, method='mean')
+
+    # Run backtest
+    print("\n5. Running backtest...")
+    backtester = Backtester(
         model=model,
         explainer=explainer,
         feature_names=feature_names,
-        prediction_threshold=0.001
+        transaction_cost=0.001,
+        slippage=0.0005,
+        initial_capital=10000.0,
+        periods_per_year=252
     )
 
-    # Run backtest
-    result = backtester.backtest(prices, features)
+    result = backtester.run_backtest(
+        prices_test,
+        X_test,
+        compute_attributions=True,
+        compute_baseline=True
+    )
 
     # Print report
-    print_backtest_report(result)
+    print_backtest_report(result, show_baseline=True)
+
+    # Analyze attributions by outcome
+    print("\n6. Attribution Analysis by Trade Outcome:")
+    print("-" * 50)
+    outcome_analysis = backtester.analyze_attributions_by_outcome(result)
+
+    if 'winning' in outcome_analysis:
+        print("\nTop features in WINNING trades:")
+        winning_sorted = sorted(outcome_analysis['winning'].items(), key=lambda x: x[1], reverse=True)
+        for name, score in winning_sorted[:5]:
+            print(f"  {name}: {score:.6f}")
+
+    if 'losing' in outcome_analysis:
+        print("\nTop features in LOSING trades:")
+        losing_sorted = sorted(outcome_analysis['losing'].items(), key=lambda x: x[1], reverse=True)
+        for name, score in losing_sorted[:5]:
+            print(f"  {name}: {score:.6f}")
+
+    print("\nDemo complete!")
