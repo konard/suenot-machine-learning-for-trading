@@ -9,17 +9,38 @@ Modules:
     - data_loader: Data loading from Bybit and Yahoo Finance
     - backtest: Backtesting framework for trading strategies
     - train: Training utilities and helpers
+    - features: Technical indicators and feature engineering
 """
 
-from .cmamba_model import CMamba, CMambaConfig
-from .data_loader import MultiAssetDataLoader
-from .backtest import CMambaBacktester
+from .cmamba_model import CMamba, CMambaConfig, CMambaTrainer
+from .data_loader import (
+    MultiAssetDataLoader,
+    BybitClient,
+    YahooFinanceClient,
+    CRYPTO_UNIVERSE,
+    STOCK_UNIVERSE,
+)
+from .backtest import CMambaBacktester, BacktestResults
+from .features import FeatureEngineer, FeatureConfig, create_feature_matrix
 
 __all__ = [
+    # Model
     "CMamba",
     "CMambaConfig",
+    "CMambaTrainer",
+    # Data loaders
     "MultiAssetDataLoader",
+    "BybitClient",
+    "YahooFinanceClient",
+    "CRYPTO_UNIVERSE",
+    "STOCK_UNIVERSE",
+    # Backtesting
     "CMambaBacktester",
+    "BacktestResults",
+    # Feature engineering
+    "FeatureEngineer",
+    "FeatureConfig",
+    "create_feature_matrix",
 ]
 
 __version__ = "0.1.0"
