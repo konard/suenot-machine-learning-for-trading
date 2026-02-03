@@ -1,0 +1,48 @@
+[package]
+name = "attention_visualization_trading"
+version = "0.1.0"
+edition = "2021"
+description = "Attention Visualization for cryptocurrency and stock trading"
+license = "MIT"
+authors = ["ML Trading Team"]
+
+[lib]
+name = "attention_visualization_trading"
+path = "src/lib.rs"
+
+[[example]]
+name = "basic_attention"
+path = "examples/basic_attention.rs"
+
+[[example]]
+name = "attention_analysis"
+path = "examples/attention_analysis.rs"
+
+[[example]]
+name = "trading_strategy"
+path = "examples/trading_strategy.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.34", features = ["full"] }
+
+# HTTP client for Bybit API
+reqwest = { version = "0.11", features = ["json"] }
+
+# JSON serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Random number generation
+rand = "0.8"
+rand_distr = "0.4"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# Statistical functions
+statrs = "0.16"
