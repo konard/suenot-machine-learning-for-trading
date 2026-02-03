@@ -19,6 +19,12 @@ try:
 except ImportError:
     HAS_REQUESTS = False
 
+try:
+    import yfinance as yf
+    HAS_YFINANCE = True
+except ImportError:
+    HAS_YFINANCE = False
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -37,6 +43,20 @@ CRYPTO_UNIVERSE = [
     "DOTUSDT",
     "MATICUSDT",
     "LINKUSDT",
+]
+
+# Default stock universe (tech sector)
+STOCK_UNIVERSE = [
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "AMZN",
+    "META",
+    "NVDA",
+    "TSLA",
+    "AMD",
+    "INTC",
+    "CRM",
 ]
 
 
@@ -201,11 +221,165 @@ class BybitClient:
         return data
 
 
+class YahooFinanceClient:
+    """
+    Client for Yahoo Finance data.
+
+    Fetches historical stock data using the yfinance library.
+    """
+
+    def __init__(self):
+        if not HAS_YFINANCE:
+            logger.warning("yfinance library not installed. Yahoo Finance API calls will not work.")
+
+    def get_klines(
+        self,
+        symbol: str,
+        interval: str = "D",
+        limit: int = 200,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None
+    ) -> List[Candle]:
+        """
+        Fetch kline (OHLCV) data from Yahoo Finance.
+
+        Args:
+            symbol: Stock ticker (e.g., "AAPL", "MSFT")
+            interval: Time interval ("D" for daily, "W" for weekly)
+            limit: Number of candles
+            start: Start time
+            end: End time
+
+        Returns:
+            List of Candle objects
+        """
+        if not HAS_YFINANCE:
+            return self._generate_mock_data(symbol, limit)
+
+        try:
+            ticker = yf.Ticker(symbol)
+
+            # Calculate date range
+            if end is None:
+                end = datetime.now()
+            if start is None:
+                start = end - timedelta(days=limit * 2)  # Extra buffer for non-trading days
+
+            # Map interval
+            interval_map = {"D": "1d", "W": "1wk", "M": "1mo"}
+            yf_interval = interval_map.get(interval, "1d")
+
+            # Fetch data
+            df = ticker.history(
+                start=start.strftime("%Y-%m-%d"),
+                end=end.strftime("%Y-%m-%d"),
+                interval=yf_interval
+            )
+
+            if df.empty:
+                logger.warning(f"No data returned for {symbol}")
+                return self._generate_mock_data(symbol, limit)
+
+            candles = []
+            for idx, row in df.iterrows():
+                candles.append(Candle(
+                    timestamp=idx.to_pydatetime(),
+                    open=float(row["Open"]),
+                    high=float(row["High"]),
+                    low=float(row["Low"]),
+                    close=float(row["Close"]),
+                    volume=float(row["Volume"]),
+                ))
+
+            # Limit to requested number
+            if len(candles) > limit:
+                candles = candles[-limit:]
+
+            return candles
+
+        except Exception as e:
+            logger.warning(f"Failed to fetch data from Yahoo Finance: {e}")
+            return self._generate_mock_data(symbol, limit)
+
+    def _generate_mock_data(self, symbol: str, limit: int) -> List[Candle]:
+        """Generate mock stock data for testing."""
+        logger.info(f"Generating mock data for {symbol}")
+
+        # Base prices for different stocks
+        base_prices = {
+            "AAPL": 180,
+            "MSFT": 380,
+            "GOOGL": 140,
+            "AMZN": 180,
+            "META": 500,
+            "NVDA": 700,
+            "TSLA": 250,
+            "AMD": 160,
+            "INTC": 45,
+            "CRM": 280,
+        }
+
+        base = base_prices.get(symbol, 100)
+        volatility = 0.015  # Stocks typically less volatile than crypto
+
+        candles = []
+        price = base
+        now = datetime.now()
+
+        for i in range(limit):
+            timestamp = now - timedelta(days=limit - i)
+
+            # Skip weekends (simple approximation)
+            if timestamp.weekday() >= 5:
+                continue
+
+            # Random walk with drift
+            change = np.random.normal(0.0003, volatility)  # Slight upward drift
+            price = price * (1 + change)
+
+            candles.append(Candle(
+                timestamp=timestamp,
+                open=price,
+                high=price * (1 + abs(np.random.normal(0, volatility))),
+                low=price * (1 - abs(np.random.normal(0, volatility))),
+                close=price * (1 + np.random.normal(0, volatility * 0.5)),
+                volume=np.random.uniform(1e7, 1e9),
+            ))
+
+        return candles
+
+    def fetch_multi_asset(
+        self,
+        symbols: List[str],
+        interval: str = "D",
+        limit: int = 200
+    ) -> Dict[str, List[Candle]]:
+        """
+        Fetch data for multiple stock tickers.
+
+        Args:
+            symbols: List of stock tickers
+            interval: Time interval
+            limit: Number of candles per asset
+
+        Returns:
+            Dictionary mapping symbol to list of candles
+        """
+        data = {}
+        for symbol in symbols:
+            data[symbol] = self.get_klines(symbol, interval, limit)
+            logger.info(f"Fetched {len(data[symbol])} candles for {symbol}")
+        return data
+
+
 class MultiAssetDataLoader:
     """
     Multi-asset data loader for C-Mamba.
 
     Loads and preprocesses data from multiple sources for training and inference.
+    Supports:
+        - Bybit API for cryptocurrency data
+        - Yahoo Finance for stock data
     """
 
     def __init__(
@@ -214,14 +388,17 @@ class MultiAssetDataLoader:
         source: str = "bybit",
         interval: str = "D"
     ):
-        self.symbols = symbols or CRYPTO_UNIVERSE
         self.source = source
         self.interval = interval
 
         if source == "bybit":
+            self.symbols = symbols or CRYPTO_UNIVERSE
             self.client = BybitClient()
+        elif source == "yahoo":
+            self.symbols = symbols or STOCK_UNIVERSE
+            self.client = YahooFinanceClient()
         else:
-            raise ValueError(f"Unsupported source: {source}")
+            raise ValueError(f"Unsupported source: {source}. Use 'bybit' or 'yahoo'")
 
     def load_data(
         self,

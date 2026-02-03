@@ -104,7 +104,7 @@ impl BacktestEngine {
             }
 
             // Normalize positions
-            let total: f64 = positions.iter().map(|x| x.abs()).sum();
+            let total: f64 = positions.iter().map(|&x| x.abs()).sum();
             if total > 0.0 {
                 for p in positions.iter_mut() {
                     *p /= total;
@@ -131,7 +131,7 @@ impl BacktestEngine {
             }
 
             // Apply transaction costs
-            let turnover: f64 = positions.iter().map(|x| x.abs()).sum();
+            let turnover: f64 = positions.iter().map(|&x| x.abs()).sum();
             let costs = turnover * self.transaction_cost;
             period_return -= costs;
 
