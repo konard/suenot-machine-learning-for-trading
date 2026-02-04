@@ -1,0 +1,49 @@
+# EfficientNet Trading - Python Dependencies
+# ============================================
+# Install with: pip install -r requirements.txt
+
+# Core Data Science Libraries
+numpy>=1.21.0
+pandas>=1.3.0
+
+# Deep Learning Framework
+torch>=1.10.0
+torchvision>=0.11.0
+
+# CCXT for Cryptocurrency Exchange API
+ccxt>=4.0.0
+
+# HTTP Requests (for direct API calls)
+requests>=2.28.0
+
+# Image Processing (optional, for advanced visualizations)
+# opencv-python>=4.5.0  # Uncomment if needed
+
+# Visualization
+matplotlib>=3.5.0
+
+# Configuration and Utilities
+pyyaml>=6.0
+
+# Jupyter Support (optional)
+# jupyter>=1.0.0
+# ipywidgets>=7.7.0
+
+# Progress Bars
+tqdm>=4.64.0
+
+# Typing Extensions (for older Python versions)
+typing-extensions>=4.0.0
+
+# Numerical Computing Extensions
+scipy>=1.7.0
+
+# Development Dependencies (optional)
+# pytest>=7.0.0
+# pytest-cov>=3.0.0
+# black>=22.0.0
+# flake8>=4.0.0
+# mypy>=0.950
+
+# Note: EfficientNet models are included in torchvision.models
+# No need for separate efficientnet-pytorch package when using torchvision >= 0.11

@@ -1,0 +1,42 @@
+# Normalizing Flows for Finance - Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# ==============================================================================
+# Core Dependencies
+# ==============================================================================
+
+# Deep Learning Framework
+torch>=2.0.0
+
+# Data manipulation and numerical computing
+numpy>=1.24.0
+pandas>=2.0.0
+
+# Cryptocurrency exchange API
+ccxt>=4.0.0
+
+# Scientific computing and statistics
+scipy>=1.10.0
+
+# ==============================================================================
+# Visualization (optional, for examples)
+# ==============================================================================
+
+matplotlib>=3.7.0
+
+# ==============================================================================
+# Development Dependencies (optional)
+# ==============================================================================
+
+# Type checking
+# mypy>=1.0.0
+
+# Code formatting
+# black>=23.0.0
+
+# Linting
+# ruff>=0.1.0
+
+# Testing
+# pytest>=7.0.0
+# pytest-cov>=4.0.0
