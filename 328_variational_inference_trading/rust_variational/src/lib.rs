@@ -21,6 +21,7 @@
 //!
 //! ```rust,no_run
 //! use variational_inference_trading::prelude::*;
+//! use ndarray::Array1;
 //!
 //! #[tokio::main]
 //! async fn main() -> anyhow::Result<()> {
@@ -30,18 +31,23 @@
 //!
 //!     // Build features
 //!     let feature_engine = FeatureEngine::new();
-//!     let features = feature_engine.compute(&klines)?;
+//!     let features = feature_engine.compute(&klines);
 //!
-//!     // Run VAE inference
-//!     let config = VAEConfig::default();
-//!     let vae = VAE::new(config);
-//!     let prediction = vae.predict(&features);
+//!     // Convert to sequences for VAE input
+//!     let sequences = feature_engine.to_sequence(&features, 60);
 //!
-//!     // Generate signals
-//!     let signal_generator = SignalGenerator::new(0.6);
-//!     let signal = signal_generator.generate(&prediction);
+//!     // Run VAE inference (if we have enough data)
+//!     if let Some(input) = sequences.first() {
+//!         let config = VAEConfig::default();
+//!         let vae = VAE::new(config);
+//!         let prediction = vae.predict(input, 100);  // 100 samples for uncertainty
 //!
-//!     println!("{:?}", signal);
+//!         // Generate signals
+//!         let signal_generator = SignalGenerator::new(0.6);
+//!         let signal = signal_generator.generate(&prediction);
+//!
+//!         println!("{:?}", signal);
+//!     }
 //!
 //!     Ok(())
 //! }

@@ -298,8 +298,6 @@ impl BacktestEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::variational::prediction::Prediction;
-    use crate::strategy::signal::SignalGenerator;
 
     #[test]
     fn test_backtest_basic() {

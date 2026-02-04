@@ -65,7 +65,7 @@ impl FeatureEngine {
         let volatility = TechnicalIndicators::volatility(&closes, self.volatility_period);
         let atr = TechnicalIndicators::atr(klines, 14);
         let rsi = TechnicalIndicators::rsi(&closes, self.rsi_period);
-        let (macd, macd_signal, macd_hist) = TechnicalIndicators::macd(
+        let (_macd, _macd_signal, macd_hist) = TechnicalIndicators::macd(
             &closes,
             self.macd_params.0,
             self.macd_params.1,
