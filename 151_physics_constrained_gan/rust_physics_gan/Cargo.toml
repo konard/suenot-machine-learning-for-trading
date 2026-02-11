@@ -1,0 +1,114 @@
+[package]
+name = "physics_constrained_gan"
+version = "0.1.0"
+edition = "2021"
+description = "Physics-Constrained GAN for cryptocurrency trading using Bybit data"
+authors = ["ML Trading Examples"]
+license = "MIT"
+keywords = ["trading", "crypto", "gan", "wgan", "physics-constrained", "generative"]
+
+[lib]
+name = "physics_constrained_gan"
+path = "src/lib.rs"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# BINARY TARGETS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[bin]]
+name = "fetch_data"
+path = "src/bin/fetch_data.rs"
+
+[[bin]]
+name = "train"
+path = "src/bin/train.rs"
+
+[[bin]]
+name = "generate"
+path = "src/bin/generate.rs"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# EXAMPLES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[example]]
+name = "physics_constraints_demo"
+path = "examples/physics_constraints_demo.rs"
+
+[[example]]
+name = "synthetic_heston"
+path = "examples/synthetic_heston.rs"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# DEPENDENCIES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[dependencies]
+# HTTP client for API requests
+reqwest = { version = "0.11", features = ["json", "blocking"] }
+
+# JSON serialization/deserialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+
+# Linear algebra and numerical computing
+ndarray = { version = "0.15", features = ["serde"] }
+ndarray-stats = "0.5"
+ndarray-rand = "0.14"
+
+# Statistics
+statrs = "0.16"
+
+# Date/time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging
+log = "0.4"
+env_logger = "0.10"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# CSV for data export/import
+csv = "1.3"
+
+# Random number generation
+rand = "0.8"
+rand_distr = "0.4"
+
+# HMAC for API authentication
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
+
+# CLI argument parsing
+clap = { version = "4.4", features = ["derive"] }
+
+# Ordered float for comparisons
+ordered-float = "4.2"
+
+# Pretty printing and tables
+tabled = "0.15"
+colored = "2.1"
+
+# Progress bars
+indicatif = "0.17"
+
+# Rayon for parallel processing
+rayon = "1.8"
+
+# Float comparisons
+approx = "0.5"
+
+[dev-dependencies]
+criterion = "0.5"
+tokio-test = "0.4"
+
+[features]
+default = []
