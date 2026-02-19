@@ -3,17 +3,60 @@
 Здесь мы рассмотрим связь между механизмом линейного внимания (Linear Attention) и моделями пространства состояний (State Space Models, SSM) для финансовых временных рядов.
 
 ## Содержание
+
 1. [Теоретические основы](#теоретические-основы)
 2. [Основные архитектуры](#основные-архитектуры)
 3. [Примеры кода](#примеры-кода)
 4. [Реализация на Rust](#реализация-на-rust)
-5. [Ресурсы](#ресурсы)
+5. [Метрики оценки](#метрики-оценки)
+6. [Ресурсы](#ресурсы)
+
+## Теоретические основы
+Механизмы линейного внимания позволяют снизить сложность вычислений до $O(N)$, разлагая операцию softmax. Сочетание этого со State Space Models дает инструмент для эффективного моделирования длинных временных рядов в трейдинге.
+
+## Основные архитектуры
+Основы линейного внимания (Generalized Linear Attention) и эффективные алгоритмы для трейдинга (рекуррентные вычисления) позволяют выполнять инференс за $O(1)$ по времени.
 
 ## Примеры кода
-- Реализации на PyTorch: [`python/model.py`](python/model.py)
-- Обучение и тестирование: [`python/train.py`](python/train.py) и [`python/notebooks/example.ipynb`](python/notebooks/example.ipynb)
-- Бэктестинг: [`python/backtest.py`](python/backtest.py)
+
+### 01: Руководство PyTorch
+- Исходный код: [`python/model.py`](python/model.py)
+
+**Запуск:**
+```bash
+python python/model.py
+```
+
+### 02: Обучение и Тестирование
+Данные загружаются через Yahoo Finance, Bybit API и LOBSTER (Binance заменен на Bybit).
+- Исходный код: [`python/train.py`](python/train.py) и [`python/notebooks/example.ipynb`](python/notebooks/example.ipynb)
+
+**Запуск:**
+```bash
+python python/train.py
+```
+
+### 03: Бэктестинг
+- Исходный код: [`python/backtest.py`](python/backtest.py)
+
+**Запуск:**
+```bash
+python python/backtest.py
+```
 
 ## Реализация на Rust
-Пример интеграции данных криптовалют (Bybit) и фондовых рынков реализован на высокопроизводительном языке Rust.
-- Исходный код: [`rust/src/lib.rs`](rust/src/lib.rs)
+Пример высокопроизводительного инференса для криптовалют (Bybit) и фондовых рынков реализован на языке Rust.
+- Библиотека: [`rust/src/lib.rs`](rust/src/lib.rs)
+- Бинарный файл: [`rust/src/main.rs`](rust/src/main.rs)
+
+**Запуск:**
+```bash
+cd rust
+cargo run
+```
+
+## Метрики оценки
+Оцениваются параметры Sharp Ratio, Sortino Ratio, Max Drawdown, а также F1-score/MSE.
+
+## Ресурсы
+Дополнительная информация представлена в статье о Transformers/SSM за 2024 год.
