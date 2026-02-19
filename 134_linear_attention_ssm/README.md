@@ -32,18 +32,22 @@ Recent research demonstrates that linear attention and SSMs are structurally con
 
 ### 01: PyTorch Model Implementation
 The fundamental block of the architecture is developed in Python. It includes building custom layers where linear attention is mapped efficiently onto state spaces.
+- See: [`python/model.py`](python/model.py)
 
 ### 02: Training and Testing on Financial Data
 Implementation using datasets like Yahoo Finance, Binance API, and LOBSTER. This stage measures:
 - Accuracy / F1-score for market direction classification
 - MSE / MAE for price prediction regression
+- See: [`python/train.py`](python/train.py) and [`python/notebooks/example.ipynb`](python/notebooks/example.ipynb)
 
 ### 03: Backtesting Framework
 Demonstrating profitability and risk metrics using Backtrader or Zipline. Key metrics include Sharpe Ratio, Sortino Ratio, and Maximum Drawdown to ensure real-world viability compared to baseline sequence models.
+- See: [`python/backtest.py`](python/backtest.py)
 
 ## Rust Implementation
 
 For production-ready trading systems requiring minimal latency, a Rust execution engine is built utilizing libraries such as `ndarray`, `polars`, and `burn` (or `candle`). This implementation achieves optimal real-time inference handling.
+- See: [`rust/src/lib.rs`](rust/src/lib.rs)
 
 ## Resources
 
