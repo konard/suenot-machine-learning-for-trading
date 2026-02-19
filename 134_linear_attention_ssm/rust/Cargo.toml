@@ -1,0 +1,15 @@
+[package]
+name = "linear_attention_ssm"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Dependencies (empty for simulated dummy mechanics, but can add them like `ndarray` etc.)
+
+[[bin]]
+name = "inference"
+path = "src/main.rs"
+
+[lib]
+name = "linear_attention_ssm"
+path = "src/lib.rs"
