@@ -1,0 +1,15 @@
+[package]
+name = "fourier_neural_operator"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rustfft = "6.1"
+
+[[bin]]
+name = "inference"
+path = "src/main.rs"
+
+[lib]
+name = "fourier_neural_operator"
+path = "src/lib.rs"
