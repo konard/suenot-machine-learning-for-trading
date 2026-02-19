@@ -26,6 +26,8 @@ def simulate_strict_rolling_backtest(total_bars=5_000, lookback_window=100, feat
     
     pnl = 0.0
     position_size = 1.0 # Standard contract
+    position = 0 # 0=Neutral, 1=Long, -1=Short
+    entry_price = 0.0
     trades = 0
     drawdown, peak = 0.0, 0.0
     
@@ -43,17 +45,21 @@ def simulate_strict_rolling_backtest(total_bars=5_000, lookback_window=100, feat
             current_price = price_series[t]
             
             # Simulated Execution Engine
-            if prediction > 0.03:
-                # Entering a Long trend / Closing a Short trend
-                if trades % 2 != 0: 
+            if prediction > 0.03 and position <= 0:
+                # Close short if exists
+                if position == -1: 
                     pnl += (entry_price - current_price) * position_size # Stop short
+                    trades += 1
+                position = 1
                 entry_price = current_price
                 trades += 1
                 
-            elif prediction < -0.03:
-                # Entering a Short trend / Closing a Long trend
-                if trades % 2 == 0:
+            elif prediction < -0.03 and position >= 0:
+                # Close long if exists
+                if position == 1:
                     pnl += (current_price - entry_price) * position_size # Stop long
+                    trades += 1
+                position = -1
                 entry_price = current_price
                 trades += 1
                 

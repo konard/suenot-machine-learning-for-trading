@@ -1,4 +1,4 @@
-use ndarray::{Array2, Axis};
+use ndarray::Array2;
 
 pub mod trading_mamba {
     use super::*;
