@@ -1,0 +1,11 @@
+[package]
+name = "byol_trading"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ndarray = "0.15"
+
+[lib]
+name = "byol_trading"
+path = "src/lib.rs"
