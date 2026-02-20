@@ -1,0 +1,11 @@
+[package]
+name = "temporal_contrastive"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ndarray = "0.15"
+
+[lib]
+name = "temporal_contrastive"
+path = "src/lib.rs"
