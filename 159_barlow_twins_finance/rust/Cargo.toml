@@ -1,0 +1,11 @@
+[package]
+name = "barlow_twins_finance"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ndarray = "0.15"
+
+[lib]
+name = "barlow_twins_finance"
+path = "src/lib.rs"
