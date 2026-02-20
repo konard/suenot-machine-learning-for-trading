@@ -1,0 +1,11 @@
+[package]
+name = "triplet_learning_stocks"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ndarray = "0.15"
+
+[lib]
+name = "triplet_learning_stocks"
+path = "src/lib.rs"
