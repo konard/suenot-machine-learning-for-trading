@@ -1,0 +1,8 @@
+[package]
+name = "hard_negative_mining"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ndarray = "0.15.6"
+rayon = "1.7.0"
