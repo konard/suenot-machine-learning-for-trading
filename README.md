@@ -4,11 +4,13 @@
 > - 🌍 **Russian Translation** — Provide a complete translation of the book materials into Russian
 > - 🦀 **Python to Rust Adaptation** — Reimplement key algorithms and examples in Rust for performance and learning purposes
 > - 📖 **Simplified Explanations** — Add beginner-friendly explanations and visual guides to make complex concepts more accessible
+> - 🚀 **New Chapters** — Addition of new chapters and modern techniques not present in the original book
 >
 > **Русский:** Данный репозиторий является форком [stefan-jansen/machine-learning-for-trading](https://github.com/stefan-jansen/machine-learning-for-trading). Цели данного форка:
 > - 🌍 **Перевод на русский язык** — Полный перевод материалов книги на русский язык
 > - 🦀 **Адаптация Python → Rust** — Переписывание ключевых алгоритмов и примеров на Rust для повышения производительности и в образовательных целях
 > - 📖 **Упрощённые объяснения** — Добавление понятных объяснений и визуальных руководств для облегчения понимания сложных концепций
+> - 🚀 **Новые главы** — Добавление новых глав и современных техник, которых нет в оригинальной книге
 >
 > ---
 
