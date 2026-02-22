@@ -1,0 +1,9 @@
+[package]
+name = "tgc_optimization"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ndarray = { version = "0.15.6", features = ["rayon"] }
+rayon = "1.7.0"
+bitvec = "1.0.1"
