@@ -3,10 +3,7 @@
 //! This example demonstrates how to distill a simple decision tree
 //! from synthetic data and extract interpretable rules.
 
-use decision_tree_distillation::{
-    model::{DecisionTree, DistillationConfig},
-    data::generate_synthetic_data,
-};
+use decision_tree_distillation::model::{DecisionTree, DistillationConfig};
 use ndarray::{Array1, Array2};
 use rand::Rng;
 
@@ -116,7 +113,7 @@ fn generate_synthetic_features(n_samples: usize) -> (Array2<f64>, Array1<f64>) {
         let buy_signal_2 = rsi < 45.0 && macd > 0.5 && volume_ratio > 1.5;
 
         // Add some noise to simulate soft labels
-        let base_prob = if buy_signal_1 {
+        let base_prob: f64 = if buy_signal_1 {
             0.8
         } else if buy_signal_2 {
             0.7
