@@ -2,7 +2,7 @@
 Data loading utilities for SSM-GNN Hybrid.
 
 Provides data fetching from:
-- Yahoo Finance (stock market)
+- Yahoo Finance (stock market) via yfinance or simulation fallback
 - Bybit API (cryptocurrency market)
 
 Includes graph construction from correlation matrices.
@@ -17,6 +17,24 @@ import requests
 logger = logging.getLogger(__name__)
 
 BYBIT_BASE_URL = "https://api.bybit.com"
+
+# Stock market base prices for simulation fallback
+STOCK_BASE_PRICES = {
+    "AAPL": 180.0, "MSFT": 420.0, "GOOGL": 175.0, "AMZN": 185.0,
+    "META": 500.0, "NVDA": 880.0, "TSLA": 250.0, "JPM": 200.0,
+    "V": 280.0, "JNJ": 155.0, "WMT": 170.0, "PG": 165.0,
+    "UNH": 520.0, "HD": 380.0, "BAC": 37.0, "XOM": 105.0,
+    "KO": 60.0, "PEP": 175.0, "INTC": 45.0, "DIS": 115.0,
+}
+
+# Sector-based volatility (annualized) for realistic simulation
+STOCK_VOLATILITY = {
+    "AAPL": 0.25, "MSFT": 0.23, "GOOGL": 0.27, "AMZN": 0.30,
+    "META": 0.35, "NVDA": 0.45, "TSLA": 0.50, "JPM": 0.22,
+    "V": 0.20, "JNJ": 0.15, "WMT": 0.18, "PG": 0.14,
+    "UNH": 0.22, "HD": 0.24, "BAC": 0.28, "XOM": 0.25,
+    "KO": 0.15, "PEP": 0.16, "INTC": 0.35, "DIS": 0.30,
+}
 
 
 def fetch_bybit_klines(
@@ -103,6 +121,126 @@ def _generate_simulated_data(symbol: str, n_points: int) -> dict:
         "close": close,
         "volume": volume,
     }
+
+
+def _generate_simulated_stock_data(ticker: str, n_points: int) -> dict:
+    """Generate simulated stock price data for offline/testing use."""
+    rng = np.random.default_rng(hash(ticker) % (2**31))
+
+    base_price = STOCK_BASE_PRICES.get(ticker, 100.0)
+    annual_vol = STOCK_VOLATILITY.get(ticker, 0.25)
+
+    # Daily volatility from annual (assuming 252 trading days)
+    daily_vol = annual_vol / np.sqrt(252)
+    daily_drift = 0.0002  # small positive drift
+
+    returns = rng.normal(daily_drift, daily_vol, n_points)
+    close = base_price * np.cumprod(1 + returns)
+
+    # Generate OHLCV from close prices
+    noise = rng.uniform(0.998, 1.002, n_points)
+    open_price = close * noise
+    high = np.maximum(open_price, close) * rng.uniform(1.0, 1.015, n_points)
+    low = np.minimum(open_price, close) * rng.uniform(0.985, 1.0, n_points)
+    volume = rng.exponential(5_000_000, n_points) * (base_price / 100)
+
+    return {
+        "timestamp": list(range(n_points)),
+        "open": open_price,
+        "high": high,
+        "low": low,
+        "close": close,
+        "volume": volume,
+    }
+
+
+def fetch_stock_data(
+    ticker: str = "AAPL",
+    period: str = "1y",
+    interval: str = "1d",
+) -> dict:
+    """
+    Fetch stock market data using yfinance (if available) or simulated fallback.
+
+    Args:
+        ticker: Stock ticker symbol (e.g., "AAPL", "MSFT").
+        period: Data period (e.g., "1y", "2y", "6mo").
+        interval: Data interval (e.g., "1d", "1h").
+
+    Returns:
+        Dictionary with keys: open, high, low, close, volume, timestamp.
+    """
+    # Map period string to approximate number of data points
+    period_map = {"1mo": 21, "3mo": 63, "6mo": 126, "1y": 252, "2y": 504, "5y": 1260}
+    n_points = period_map.get(period, 252)
+
+    logger.info("Fetching stock data: ticker=%s, period=%s, interval=%s", ticker, period, interval)
+
+    try:
+        import yfinance as yf
+        df = yf.download(ticker, period=period, interval=interval, progress=False)
+        if df.empty:
+            logger.warning("Empty yfinance response for %s, using simulated data", ticker)
+            return _generate_simulated_stock_data(ticker, n_points)
+
+        return {
+            "timestamp": [int(ts.timestamp()) for ts in df.index],
+            "open": df["Open"].values.flatten().astype(float),
+            "high": df["High"].values.flatten().astype(float),
+            "low": df["Low"].values.flatten().astype(float),
+            "close": df["Close"].values.flatten().astype(float),
+            "volume": df["Volume"].values.flatten().astype(float),
+        }
+    except ImportError:
+        logger.info("yfinance not installed, using simulated stock data for %s", ticker)
+        return _generate_simulated_stock_data(ticker, n_points)
+    except Exception as e:
+        logger.warning("Failed to fetch stock data for %s: %s. Using simulated data.", ticker, e)
+        return _generate_simulated_stock_data(ticker, n_points)
+
+
+def load_stock_data(
+    tickers: Optional[list] = None,
+    period: str = "1y",
+    interval: str = "1d",
+) -> tuple:
+    """
+    Load data for multiple stock tickers.
+
+    Args:
+        tickers: List of stock ticker symbols. Defaults to FAANG+.
+        period: Data period (e.g., "1y", "2y").
+        interval: Data interval (e.g., "1d", "1h").
+
+    Returns:
+        Tuple of (all_close, features) where:
+            all_close: (n_assets, seq_len) close price matrix
+            features: (n_assets, seq_len, n_features) feature tensor
+    """
+    from python.ssm_gnn_model import compute_technical_features
+
+    if tickers is None:
+        tickers = ["AAPL", "MSFT", "GOOGL", "AMZN", "META"]
+
+    close_arrays = []
+    feature_list = []
+
+    for ticker in tickers:
+        data = fetch_stock_data(ticker, period, interval)
+        close = data["close"]
+        close_arrays.append(close)
+        feats = compute_technical_features(close, window=14)
+        feature_list.append(feats)
+
+    # Align to minimum length
+    min_len = min(len(c) for c in close_arrays)
+    all_close = np.array([c[:min_len] for c in close_arrays])
+    features = np.array([f[:min_len] for f in feature_list])
+
+    logger.info("Loaded stock data: %d tickers, %d data points, %d features",
+                len(tickers), min_len, features.shape[2])
+
+    return all_close, features
 
 
 def load_multi_asset_data(
