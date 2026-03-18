@@ -19,11 +19,10 @@
 //! #[tokio::main]
 //! async fn main() -> anyhow::Result<()> {
 //!     let client = BybitClient::new();
-//!     let data = client.fetch_klines("BTCUSDT", "D", 100).await?;
+//!     let series = client.get_klines("BTCUSDT", "D", None, None, Some(100)).await?;
 //!
 //!     let config = CMambaConfig::default();
 //!     let model = CMamba::new(config);
-//!     let predictions = model.predict(&data)?;
 //!
 //!     Ok(())
 //! }
