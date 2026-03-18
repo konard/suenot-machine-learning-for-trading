@@ -4,7 +4,7 @@
 //! For training, use the Python implementation with PyTorch.
 
 use anyhow::{Context, Result};
-use ndarray::{Array1, Array2, Array3, Axis};
+use ndarray::{Array1, Array2, Axis};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -124,10 +124,10 @@ impl MambaBlock {
 
         // Simplified SSM (linear approximation for inference)
         // In production, use optimized scan implementation
-        let mut h = Array1::zeros(d_inner);
+        let mut h: Array1<f64> = Array1::zeros(d_inner);
         let mut y = Array2::zeros((seq_len, d_inner));
 
-        let a = self.a_log.mapv(|x| (-x.exp()));
+        let a = self.a_log.mapv(|x| -x.exp());
 
         for t in 0..seq_len {
             let x_t = x_part.row(t);
@@ -198,12 +198,13 @@ impl MambaTS {
 
         // Try bincode format
         bincode::deserialize(&bytes)
-            .context("Failed to deserialize model")
+            .map_err(|e| anyhow::anyhow!("Failed to deserialize model: {}", e))
     }
 
     /// Save model to file
     pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<()> {
-        let bytes = bincode::serialize(self)?;
+        let bytes = bincode::serialize(self)
+            .map_err(|e| anyhow::anyhow!("Failed to serialize model: {}", e))?;
         std::fs::write(path, bytes)?;
         Ok(())
     }

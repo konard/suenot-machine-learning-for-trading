@@ -1,7 +1,7 @@
 //! Technical indicators and feature engineering for financial time series.
 
 use crate::api::bybit::Candle;
-use ndarray::{Array1, Array2};
+use ndarray::Array2;
 
 /// Technical indicators calculator
 pub struct TechnicalIndicators;
@@ -248,12 +248,12 @@ pub fn prepare_features(candles: &[Candle]) -> Array2<f64> {
     let ema_10 = TechnicalIndicators::ema(&close, 10);
     let ema_20 = TechnicalIndicators::ema(&close, 20);
     let rsi = TechnicalIndicators::rsi(&close, 14);
-    let (macd, macd_signal, macd_hist) = TechnicalIndicators::macd(&close, 12, 26, 9);
+    let (macd, macd_signal, _macd_hist) = TechnicalIndicators::macd(&close, 12, 26, 9);
     let (bb_upper, bb_middle, bb_lower) = TechnicalIndicators::bollinger_bands(&close, 20, 2.0);
     let atr = TechnicalIndicators::atr(candles, 14);
     let volatility = TechnicalIndicators::volatility(&close, 20);
     let returns = TechnicalIndicators::returns(&close);
-    let log_returns = TechnicalIndicators::log_returns(&close);
+    let _log_returns = TechnicalIndicators::log_returns(&close);
 
     // Bollinger Band width
     let bb_width: Vec<f64> = bb_upper
