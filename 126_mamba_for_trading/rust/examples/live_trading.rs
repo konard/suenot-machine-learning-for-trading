@@ -261,19 +261,19 @@ fn generate_synthetic_data(n_bars: usize) -> Vec<OhlcvBar> {
     let mut rng = rand::thread_rng();
 
     let mut bars = Vec::with_capacity(n_bars);
-    let mut price = 45000.0; // Starting price for BTC-like simulation
+    let mut price: f64 = 45000.0; // Starting price for BTC-like simulation
     let mut timestamp = 1704067200000_i64;
 
     for _ in 0..n_bars {
-        let change = rng.gen_range(-200.0..250.0);
+        let change: f64 = rng.gen_range(-200.0..250.0);
         price = (price + change).max(30000.0);
 
-        let volatility = rng.gen_range(50.0..300.0);
-        let open = price - volatility * rng.gen_range(-0.5..0.5);
-        let close = price + volatility * rng.gen_range(-0.5..0.5);
-        let high = open.max(close) + volatility * rng.gen_range(0.0..1.0);
-        let low = open.min(close) - volatility * rng.gen_range(0.0..1.0);
-        let volume = rng.gen_range(100.0..1000.0);
+        let volatility: f64 = rng.gen_range(50.0..300.0);
+        let open: f64 = price - volatility * rng.gen_range(-0.5_f64..0.5);
+        let close: f64 = price + volatility * rng.gen_range(-0.5_f64..0.5);
+        let high = open.max(close) + volatility * rng.gen_range(0.0_f64..1.0);
+        let low = open.min(close) - volatility * rng.gen_range(0.0_f64..1.0);
+        let volume: f64 = rng.gen_range(100.0..1000.0);
 
         bars.push(OhlcvBar {
             timestamp,

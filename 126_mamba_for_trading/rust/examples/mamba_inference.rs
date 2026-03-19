@@ -130,20 +130,20 @@ fn generate_synthetic_data(n_bars: usize) -> Vec<OhlcvBar> {
     let mut rng = rand::thread_rng();
 
     let mut bars = Vec::with_capacity(n_bars);
-    let mut price = 100.0;
+    let mut price: f64 = 100.0;
     let mut timestamp = 1704067200000_i64; // 2024-01-01 00:00:00 UTC
 
     for _ in 0..n_bars {
         // Random walk with slight upward drift
-        let change = rng.gen_range(-2.0..2.5);
+        let change: f64 = rng.gen_range(-2.0..2.5);
         price = (price + change).max(50.0);
 
-        let volatility = rng.gen_range(0.5..3.0);
-        let open = price - volatility * rng.gen_range(-0.5..0.5);
-        let close = price + volatility * rng.gen_range(-0.5..0.5);
-        let high = open.max(close) + volatility * rng.gen_range(0.0..1.0);
-        let low = open.min(close) - volatility * rng.gen_range(0.0..1.0);
-        let volume = rng.gen_range(1000.0..10000.0);
+        let volatility: f64 = rng.gen_range(0.5..3.0);
+        let open: f64 = price - volatility * rng.gen_range(-0.5_f64..0.5);
+        let close: f64 = price + volatility * rng.gen_range(-0.5_f64..0.5);
+        let high = open.max(close) + volatility * rng.gen_range(0.0_f64..1.0);
+        let low = open.min(close) - volatility * rng.gen_range(0.0_f64..1.0);
+        let volume: f64 = rng.gen_range(1000.0..10000.0);
 
         bars.push(OhlcvBar {
             timestamp,

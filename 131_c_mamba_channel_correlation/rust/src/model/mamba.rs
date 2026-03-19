@@ -49,7 +49,7 @@ impl SelectiveSsm {
         let mut output = Array3::zeros((batch_size, seq_len, d_model));
 
         for b in 0..batch_size {
-            let mut h = Array1::zeros(self.d_state);
+            let mut h: Array1<f64> = Array1::zeros(self.d_state);
 
             for t in 0..seq_len {
                 // Get input slice
@@ -63,7 +63,7 @@ impl SelectiveSsm {
                 delta = sigmoid(delta);
 
                 // Compute B * x
-                let mut bx = Array1::zeros(self.d_state);
+                let mut bx: Array1<f64> = Array1::zeros(self.d_state);
                 for s in 0..self.d_state {
                     for d in 0..self.d_model {
                         bx[s] += self.w_b[[d, s]] * x_t[d];
@@ -78,7 +78,7 @@ impl SelectiveSsm {
 
                 // Output: y = C * h
                 for d in 0..d_model {
-                    let mut y = 0.0;
+                    let mut y: f64 = 0.0;
                     for s in 0..self.d_state {
                         y += h[s] * self.w_c[[s, d]];
                     }

@@ -162,7 +162,7 @@ impl AttentionRollout {
 
             // Add residual connection
             if self.config.add_residual {
-                let identity = Array2::eye(seq_len);
+                let identity: Array2<f64> = Array2::eye(seq_len);
                 let w = self.config.residual_weight;
                 fused = &fused * (1.0 - w) + &identity * w;
             }

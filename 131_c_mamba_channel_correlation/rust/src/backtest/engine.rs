@@ -104,7 +104,7 @@ impl BacktestEngine {
             }
 
             // Normalize positions
-            let total: f64 = positions.iter().map(|&x| x.abs()).sum();
+            let total: f64 = positions.iter().map(|x: &f64| x.abs()).sum();
             if total > 0.0 {
                 for p in positions.iter_mut() {
                     *p /= total;
@@ -116,7 +116,7 @@ impl BacktestEngine {
             let mut period_return = 0.0;
 
             for (i, &pos) in positions.iter().enumerate() {
-                if pos.abs() > 1e-8 {
+                if pos.abs() > 1e-8_f64 {
                     let asset_return = (prices[[end_t, i]] - prices[[t, i]]) / prices[[t, i]];
                     period_return += pos * asset_return;
                     n_trades += 1;

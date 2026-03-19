@@ -215,39 +215,48 @@ output_i = MLP(z_i)
 
 ## Implementation in Python
 
-The Python implementation uses PyTorch with `torch_geometric` for GNN layers. Key files:
+The Python implementation uses NumPy for numerical computation. Key files:
 
-- `python/ssm_gnn_model.py` — Core SSM-GNN hybrid model
-- `python/data_loader.py` — Data loading with stock and crypto (Bybit) data
+- `python/ssm_gnn_model.py` — Core SSM-GNN hybrid model (DiagonalSSM, GAT, SSMGNNHybrid)
+- `python/data_loader.py` — Data loading for stock market (Yahoo Finance) and crypto (Bybit)
 - `python/backtest.py` — Backtesting engine with performance metrics
 
-### Quick Start
+### Quick Start: Stock Market
 
 ```python
 from python.ssm_gnn_model import SSMGNNHybrid
 from python.data_loader import load_stock_data, build_correlation_graph
 
-# Load data
+# Load stock market data (uses yfinance if available, falls back to simulation)
 prices, features = load_stock_data(
     tickers=["AAPL", "MSFT", "GOOGL", "AMZN", "META"],
-    period="2y"
+    period="1y"
 )
 
 # Build correlation graph
 edge_index, edge_weight = build_correlation_graph(prices, threshold=0.5)
 
-# Create model
-model = SSMGNNHybrid(
-    n_features=features.shape[-1],
-    d_model=64,
-    d_state=16,
-    n_gnn_layers=2,
-    n_heads=4,
-    n_classes=3  # up / flat / down
-)
+# Create model and predict
+model = SSMGNNHybrid(n_features=features.shape[-1], d_model=64, d_state=16)
+signals, confidences = model.predict_signals(features, edge_index, edge_weight)
+```
 
-# Forward pass
-predictions = model(features, edge_index, edge_weight)
+### Quick Start: Cryptocurrency (Bybit)
+
+```python
+from python.data_loader import load_multi_asset_data, build_correlation_graph, prepare_features
+from python.ssm_gnn_model import SSMGNNHybrid
+
+# Load crypto data from Bybit API
+prices_dict, all_close = load_multi_asset_data(
+    symbols=["BTCUSDT", "ETHUSDT", "SOLUSDT", "AVAXUSDT", "MATICUSDT"]
+)
+features = prepare_features(prices_dict, list(prices_dict.keys()))
+
+# Build graph and predict
+edge_index, edge_weight = build_correlation_graph(all_close)
+model = SSMGNNHybrid(n_features=features.shape[-1], d_model=64, d_state=16)
+signals, confidences = model.predict_signals(features, edge_index, edge_weight)
 ```
 
 ---
@@ -258,12 +267,14 @@ The Rust implementation provides a high-performance SSM-GNN engine suitable for 
 
 ### Key modules:
 
-- `src/ssm.rs` — Diagonal SSM with discretization
-- `src/gnn.rs` — GAT-style graph attention layer
-- `src/model.rs` — Combined SSM-GNN hybrid
-- `src/data/` — Bybit API data fetching
+- `src/model/ssm.rs` — Diagonal SSM with discretization
+- `src/model/gnn.rs` — GAT-style graph attention layer
+- `src/model/hybrid.rs` — Combined SSM-GNN hybrid
+- `src/data/bybit.rs` — Bybit API data fetching (cryptocurrency)
+- `src/data/stock.rs` — Stock market data (simulated with sector volatility)
+- `src/data/features.rs` — Technical feature computation and graph construction
 - `src/trading/` — Signal generation and backtesting
-- `examples/` — Working examples
+- `examples/` — Working examples (crypto, stock market, mixed portfolio)
 
 ### Quick Start
 

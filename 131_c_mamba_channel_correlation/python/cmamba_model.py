@@ -84,7 +84,7 @@ class SelectiveSSM:
         batch_size, seq_len, _ = x.shape
 
         # Compute data-dependent parameters
-        delta = np.sigmoid(x @ self.W_delta).squeeze(-1)  # [batch, seq_len]
+        delta = (1.0 / (1.0 + np.exp(-(x @ self.W_delta)))).squeeze(-1)  # [batch, seq_len]
         B = x @ self.W_B  # [batch, seq_len, d_state]
 
         # Discretize A

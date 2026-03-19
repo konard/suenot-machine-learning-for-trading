@@ -70,8 +70,9 @@ impl TradingStrategy {
         };
         let normalized: Vec<f64> = prices.iter().map(|&p| (p - mean) / std).collect();
 
-        // Run HiPPO
-        let history = self.hippo.process_sequence(&normalized, self.config.dt);
+        // Run HiPPO (cap dt for numerical stability with large N)
+        let effective_dt = self.config.dt.min(1.0 / (self.config.n_hippo as f64 + 1.0));
+        let history = self.hippo.process_sequence(&normalized, effective_dt);
 
         // Generate signals from coefficients
         let mut signals = generate_signals(&history, self.config.trend_threshold);
@@ -92,7 +93,7 @@ impl TradingStrategy {
 
                 let median_vol = {
                     let mut sorted = vol_proxy.clone();
-                    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
                     sorted[sorted.len() / 2]
                 };
                 let vol_threshold = median_vol * 2.0;
