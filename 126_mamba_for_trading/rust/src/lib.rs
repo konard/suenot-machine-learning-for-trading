@@ -17,16 +17,21 @@
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     // Load data from Bybit
-//!     let loader = BybitClient::new();
-//!     let data = loader.fetch_klines("BTCUSDT", "60", 1000).await?;
+//!     let client = BybitClient::new();
+//!     let bars = client.fetch_klines("BTCUSDT", "60", 1000).await?;
+//!
+//!     // Compute features
+//!     let fe = FeatureEngineer::new(true);
+//!     let features = fe.compute_features(&bars);
 //!
 //!     // Create model
 //!     let config = MambaConfig::default();
 //!     let model = MambaTrading::new(config);
 //!
-//!     // Get predictions
-//!     let predictions = model.predict(&data)?;
-//!     println!("Signal: {:?}", predictions);
+//!     // Get prediction from last 60 bars
+//!     let seq: Vec<Vec<f64>> = features[features.len()-60..].to_vec();
+//!     let prediction = model.predict(&seq);
+//!     println!("Signal: {:?}", prediction.signal);
 //!
 //!     Ok(())
 //! }
