@@ -4,7 +4,7 @@
 //! teacher and student (distilled) trading models.
 
 use chrono::{DateTime, Utc};
-use ndarray::{Array1, Array2};
+use ndarray::Array1;
 use serde::{Deserialize, Serialize};
 
 /// A single trade
@@ -196,7 +196,7 @@ impl Backtester {
             let signal = predictions[i];
             let price = prices[i];
             let time = timestamps[i];
-            let prev_price = prices[i - 1];
+            let _prev_price = prices[i - 1];
 
             // Update equity with open position
             if let Some(ref trade) = current_trade {
@@ -365,7 +365,7 @@ impl Backtester {
 
     fn calculate_max_drawdown(&self, equity: &[f64]) -> f64 {
         let mut max_value = equity[0];
-        let mut max_drawdown = 0.0;
+        let mut max_drawdown: f64 = 0.0;
 
         for &value in equity {
             max_value = max_value.max(value);

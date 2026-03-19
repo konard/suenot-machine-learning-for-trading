@@ -3,7 +3,7 @@
 //! This module provides a decision tree implementation optimized for
 //! knowledge distillation in trading applications.
 
-use ndarray::{Array1, Array2, ArrayView1, Axis};
+use ndarray::{Array1, Array2, ArrayView1};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -170,7 +170,7 @@ impl DecisionTree {
         }
 
         // Find best split
-        if let Some((best_feature, best_threshold, best_impurity)) =
+        if let Some((best_feature, best_threshold, _best_impurity)) =
             self.find_best_split(features, soft_labels, indices)
         {
             // Split indices
