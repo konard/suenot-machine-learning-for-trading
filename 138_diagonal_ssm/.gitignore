@@ -12,7 +12,6 @@ venv/
 
 # Rust
 rust/target/
-rust/Cargo.lock
 
 # Data
 *.csv

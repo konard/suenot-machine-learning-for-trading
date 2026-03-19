@@ -19,6 +19,8 @@
 //!     max_depth: 5,
 //!     min_samples_leaf: 50,
 //!     min_samples_split: 100,
+//!     feature_names: None,
+//!     class_names: None,
 //! };
 //!
 //! let mut tree = DecisionTree::new(config);

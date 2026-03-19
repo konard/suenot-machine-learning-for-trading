@@ -313,16 +313,8 @@ def train(
     trainer = CMambaTrainer(
         model=model,
         learning_rate=args.learning_rate,
-        batch_size=args.batch_size
+        patience=args.patience,
     )
-
-    # Training history
-    history = {
-        "train_loss": [],
-        "val_loss": [],
-        "best_epoch": 0,
-        "best_val_loss": float("inf")
-    }
 
     # Create output directory
     os.makedirs(args.output_dir, exist_ok=True)
@@ -334,65 +326,25 @@ def train(
     logger.info(f"Starting training: {args.experiment_name}")
     logger.info(f"Epochs: {args.epochs}, Batch size: {args.batch_size}")
 
-    best_val_loss = float("inf")
-    patience_counter = 0
     start_time = time.time()
 
-    for epoch in range(args.epochs):
-        epoch_start = time.time()
-
-        # Training epoch
-        train_loss = trainer.train_epoch(X_train, Y_train)
-        history["train_loss"].append(train_loss)
-
-        # Validation
-        val_loss = trainer.evaluate(X_val, Y_val)
-        history["val_loss"].append(val_loss)
-
-        epoch_time = time.time() - epoch_start
-
-        # Log progress
-        if args.verbose or (epoch + 1) % 10 == 0:
-            logger.info(
-                f"Epoch {epoch + 1}/{args.epochs} - "
-                f"Train Loss: {train_loss:.6f}, Val Loss: {val_loss:.6f} "
-                f"({epoch_time:.2f}s)"
-            )
-
-        # Check for improvement
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            history["best_epoch"] = epoch + 1
-            history["best_val_loss"] = best_val_loss
-            patience_counter = 0
-
-            # Save best model
-            save_checkpoint(
-                model, args, epoch + 1, val_loss,
-                os.path.join(args.output_dir, f"{args.experiment_name}_best.json")
-            )
-        else:
-            patience_counter += 1
-
-        # Save periodic checkpoint
-        if (epoch + 1) % args.save_every == 0:
-            save_checkpoint(
-                model, args, epoch + 1, val_loss,
-                os.path.join(args.output_dir, f"{args.experiment_name}_epoch{epoch + 1}.json")
-            )
-
-        # Early stopping
-        if patience_counter >= args.patience:
-            logger.info(f"Early stopping at epoch {epoch + 1}")
-            break
+    # Train using the trainer's built-in loop
+    history = trainer.train(
+        train_data=(X_train, Y_train),
+        val_data=(X_val, Y_val),
+        epochs=args.epochs,
+        batch_size=args.batch_size,
+        verbose=args.verbose,
+    )
 
     total_time = time.time() - start_time
     logger.info(f"Training completed in {total_time:.2f}s")
-    logger.info(f"Best validation loss: {history['best_val_loss']:.6f} at epoch {history['best_epoch']}")
 
     # Save final model
+    final_val_loss = history["val_loss"][-1] if history["val_loss"] else float("inf")
+    final_epoch = len(history["train_loss"])
     save_checkpoint(
-        model, args, epoch + 1, val_loss,
+        model, args, final_epoch, final_val_loss,
         os.path.join(args.output_dir, f"{args.experiment_name}_final.json")
     )
 

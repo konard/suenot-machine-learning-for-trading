@@ -231,8 +231,75 @@ def run_ssm_gnn_backtest(
     return result
 
 
+def run_stock_backtest(
+    tickers: list = None,
+    period: str = "1y",
+    initial_capital: float = 100_000.0,
+) -> BacktestResult:
+    """
+    End-to-end backtest of the SSM-GNN hybrid strategy on stock market data.
+
+    Args:
+        tickers: List of stock ticker symbols.
+        period: Data period (e.g., "1y", "2y").
+        initial_capital: Starting capital.
+
+    Returns:
+        BacktestResult with full performance metrics.
+    """
+    from python.data_loader import load_stock_data, build_correlation_graph
+    from python.ssm_gnn_model import SSMGNNHybrid
+
+    if tickers is None:
+        tickers = ["AAPL", "MSFT", "GOOGL", "AMZN", "META"]
+
+    # Load stock data
+    all_close, features = load_stock_data(tickers, period)
+
+    # Build graph
+    edge_index, edge_weight = build_correlation_graph(all_close)
+
+    # Create model
+    n_features = features.shape[2]
+    model = SSMGNNHybrid(
+        n_features=n_features,
+        d_model=64,
+        d_state=16,
+        n_gnn_layers=2,
+        n_heads=4,
+        n_classes=3,
+    )
+
+    # Generate rolling signals
+    n_assets, seq_len, _ = features.shape
+    window_size = 50
+    all_signals = np.zeros((seq_len, n_assets), dtype=int)
+    all_confidences = np.zeros((seq_len, n_assets))
+
+    for t in range(window_size, seq_len):
+        window_features = features[:, t-window_size:t, :]
+        signals, confidences = model.predict_signals(window_features, edge_index, edge_weight)
+        all_signals[t] = signals
+        all_confidences[t] = confidences
+
+    # Run backtest (daily data = 252 periods/year)
+    bt = Backtester(
+        initial_capital=initial_capital,
+        commission=0.001,
+        slippage=0.0005,
+        periods_per_year=252,
+    )
+
+    result = bt.run(all_signals, all_close.T, all_confidences)
+    return result
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
+
+    print("=" * 60)
+    print("SSM-GNN Backtest: Cryptocurrency (Bybit)")
+    print("=" * 60)
     result = run_ssm_gnn_backtest()
     print(f"Total Return: {result.total_return:.4f}")
     print(f"Sharpe Ratio: {result.sharpe_ratio:.3f}")
@@ -241,3 +308,16 @@ if __name__ == "__main__":
     print(f"Win Rate: {result.win_rate:.3f}")
     print(f"Profit Factor: {result.profit_factor:.3f}")
     print(f"Number of Trades: {result.n_trades}")
+
+    print()
+    print("=" * 60)
+    print("SSM-GNN Backtest: Stock Market")
+    print("=" * 60)
+    stock_result = run_stock_backtest()
+    print(f"Total Return: {stock_result.total_return:.4f}")
+    print(f"Sharpe Ratio: {stock_result.sharpe_ratio:.3f}")
+    print(f"Sortino Ratio: {stock_result.sortino_ratio:.3f}")
+    print(f"Max Drawdown: {stock_result.max_drawdown:.4f}")
+    print(f"Win Rate: {stock_result.win_rate:.3f}")
+    print(f"Profit Factor: {stock_result.profit_factor:.3f}")
+    print(f"Number of Trades: {stock_result.n_trades}")

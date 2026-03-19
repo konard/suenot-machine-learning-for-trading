@@ -92,7 +92,7 @@ impl SSMLayer {
             b,
             c,
             d,
-            log_delta: (-2.0_f64).ln(), // delta = 0.01 approx
+            log_delta: (0.01_f64).ln(), // delta = 0.01, ln(0.01) ≈ -4.605
         }
     }
 
