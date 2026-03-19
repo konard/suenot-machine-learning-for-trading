@@ -2,276 +2,261 @@
 
 ## 1. Introduction
 
-The Variational Quantum Classifier (VQC) represents one of the most promising near-term applications of quantum computing to machine learning. Unlike fault-tolerant quantum algorithms that require millions of error-corrected qubits, VQCs operate within the constraints of today's Noisy Intermediate-Scale Quantum (NISQ) devices by leveraging hybrid quantum-classical optimization. In the context of financial markets, VQCs offer a compelling approach to classification tasks such as predicting whether an asset's price will move up or down, detecting market regimes, and identifying trading signals.
+Variational Quantum Classifiers (VQCs) represent one of the most promising near-term quantum machine learning algorithms. Unlike Quantum SVMs, which use quantum circuits solely for kernel evaluation, VQCs are end-to-end parameterized quantum models: a quantum circuit with trainable rotation angles is optimized via classical gradient-based methods to perform classification directly. This hybrid quantum-classical approach makes VQCs particularly well-suited for Noisy Intermediate-Scale Quantum (NISQ) devices, where circuit depth must remain shallow.
 
-The core idea behind a VQC is deceptively simple: encode classical data into a quantum state, apply a parameterized quantum circuit (the "variational ansatz"), measure the output, and interpret the measurement probabilities as class predictions. The circuit parameters are then optimized using a classical optimizer to minimize a loss function, much like training a neural network. What makes VQCs interesting for trading is their ability to explore exponentially large Hilbert spaces with relatively few parameters, potentially capturing complex nonlinear relationships in market data that classical models might miss.
+In financial applications, VQCs can classify market regimes, predict price direction, and detect anomalous patterns. The variational nature of the algorithm allows the model to adapt its quantum feature representation during training, potentially discovering non-linear decision boundaries that are difficult for classical models to learn. The circuit structure — encoding data into quantum states and then applying trainable rotations — creates an expressive hypothesis class that scales exponentially with the number of qubits.
 
-This chapter provides a comprehensive treatment of VQCs applied to financial prediction. We begin with the mathematical foundations, move through architecture design, discuss training strategies, and conclude with a complete Rust implementation that fetches real market data from the Bybit exchange and trains a VQC to predict price direction for BTCUSDT.
+In this chapter, we build a complete Variational Quantum Classifier trading system in Rust. We simulate the quantum circuits classically, but the mathematical framework is fully compatible with execution on real quantum processors. Our system fetches market data from the Bybit exchange, engineers financial features, labels market regimes, trains a VQC, and evaluates its predictive performance.
 
 ## 2. Mathematical Foundation
 
-### 2.1 Parameterized Quantum Circuits as Classifiers
+### 2.1 The VQC Algorithm
 
-A parameterized quantum circuit (PQC) is a unitary transformation $U(\theta)$ that depends on a set of tunable parameters $\theta = (\theta_1, \theta_2, \ldots, \theta_p)$. Given an $n$-qubit system, the circuit acts on the initial state $|0\rangle^{\otimes n}$ to produce:
+A Variational Quantum Classifier consists of three components:
 
-$$|\psi(\theta)\rangle = U(\theta)|0\rangle^{\otimes n}$$
+1. **Data encoding circuit** U(x): Maps classical input x into a quantum state.
+2. **Variational (trainable) circuit** W(theta): A parameterized quantum circuit with trainable angles theta.
+3. **Measurement**: Measures one or more qubits to obtain a classification prediction.
 
-For classification, we define a mapping from the measurement outcome probabilities to class labels. The probability of measuring a specific bitstring $z$ is:
-
-$$P(z|\theta) = |\langle z | \psi(\theta) \rangle|^2$$
-
-In the simplest binary classification setup, we measure the first qubit and use $P(|0\rangle)$ as the probability of class 0 and $P(|1\rangle)$ as the probability of class 1.
-
-### 2.2 Data Encoding
-
-Before a quantum circuit can process classical data, we must encode it into a quantum state. Two primary encoding strategies are used:
-
-**Angle Encoding:** Each feature $x_i$ is encoded as a rotation angle on a dedicated qubit:
-
-$$|x\rangle = \bigotimes_{i=1}^{n} R_Y(x_i)|0\rangle$$
-
-where $R_Y(\theta) = \exp(-i\theta Y/2)$ is a rotation about the Y-axis. This approach is straightforward and requires one qubit per feature. Angle encoding is computationally efficient, requiring only $O(n)$ gates for $n$ features.
-
-**Amplitude Encoding:** The feature vector $\mathbf{x} = (x_1, \ldots, x_{2^n})$ is encoded into the amplitudes of an $n$-qubit state:
-
-$$|x\rangle = \sum_{i=0}^{2^n - 1} x_i |i\rangle$$
-
-where $\mathbf{x}$ is normalized such that $\|\mathbf{x}\|^2 = 1$. Amplitude encoding is exponentially compact (encoding $2^n$ features in $n$ qubits) but requires more complex state preparation circuits.
-
-For trading applications, angle encoding is preferred due to its simplicity and robustness to noise. We typically work with a small number of engineered features (returns, volatility, momentum), making angle encoding a natural fit.
-
-### 2.3 Variational Ansatz
-
-The variational ansatz defines the structure of the parameterized circuit. A common design alternates between layers of single-qubit rotations and entangling gates:
-
-**Single-qubit layer:** Apply $R_Y(\theta_{l,i})$ and $R_Z(\theta_{l,i}')$ rotations to each qubit $i$ in layer $l$:
-
-$$U_{\text{rot}}^{(l)} = \bigotimes_{i=1}^{n} R_Z(\theta_{l,i}') R_Y(\theta_{l,i})$$
-
-**Entangling layer:** Apply CNOT gates in a linear or circular pattern to create correlations between qubits:
-
-$$U_{\text{ent}} = \prod_{i=1}^{n-1} \text{CNOT}(i, i+1)$$
-
-A full ansatz with $L$ layers takes the form:
-
-$$U(\theta) = \prod_{l=1}^{L} U_{\text{ent}} \cdot U_{\text{rot}}^{(l)}$$
-
-The expressibility of the ansatz (its ability to represent arbitrary unitaries) increases with the number of layers, but so does the risk of barren plateaus in the optimization landscape.
-
-### 2.4 Measurement-Based Classification
-
-After applying the full circuit (encoding + ansatz), we perform a computational basis measurement on the first qubit. The probability of obtaining outcome $|0\rangle$ on the first qubit is:
-
-$$p_0 = \sum_{z: z_1 = 0} |\langle z | \psi \rangle|^2$$
-
-For binary classification (e.g., price up vs. price down), we interpret $p_0$ as the probability of class 0 (price down) and $p_1 = 1 - p_0$ as the probability of class 1 (price up).
-
-### 2.5 Cross-Entropy Loss
-
-The model is trained to minimize the binary cross-entropy loss:
-
-$$\mathcal{L}(\theta) = -\frac{1}{N} \sum_{j=1}^{N} \left[ y_j \log(p_1^{(j)}) + (1 - y_j) \log(1 - p_1^{(j)}) \right]$$
-
-where $y_j \in \{0, 1\}$ is the true label and $p_1^{(j)}$ is the predicted probability of class 1 for sample $j$. This loss function is differentiable with respect to the circuit parameters, enabling gradient-based optimization.
-
-## 3. VQC Architecture
-
-The complete VQC architecture consists of three sequential stages:
-
-### 3.1 Feature Map Circuit
-
-The feature map circuit encodes classical input data into a quantum state. For trading with $n$ features:
+The full quantum state before measurement is:
 
 ```
-|0> -- RY(x_1) --
-|0> -- RY(x_2) --
-|0> -- RY(x_3) --
-...
-|0> -- RY(x_n) --
+|psi(x, theta)> = W(theta) * U(x) |0...0>
 ```
 
-To enhance the feature map's expressiveness, we can apply data re-uploading, where the encoding is repeated between variational layers. This has been shown to improve the model's capacity to learn complex decision boundaries.
-
-### 3.2 Variational Circuit
-
-The variational circuit applies trainable rotations and entanglement:
+The prediction is obtained by measuring the expectation value of the Pauli-Z operator on the first qubit:
 
 ```
--- RY(t1) -- RZ(t2) -- o --- ... ---
-                        |
--- RY(t3) -- RZ(t4) -- X -- o -- ...
-                             |
--- RY(t5) -- RZ(t6) --------X -- ...
+y_pred = <psi(x, theta)| Z_0 |psi(x, theta)>
 ```
 
-Each layer adds $2n$ parameters ($n$ for RY and $n$ for RZ rotations). With $L$ layers, the total parameter count is $2nL$. For a 4-qubit, 3-layer VQC, this gives 24 trainable parameters, which is compact enough for efficient classical optimization yet expressive enough for useful classification.
+This expectation value lies in [-1, +1], providing a natural binary classification output. For multi-class problems, we measure multiple qubits or use one-vs-rest encoding.
 
-### 3.3 Measurement
+### 2.2 Data Encoding Circuit U(x)
 
-The final step measures the first qubit in the computational basis. The squared amplitudes of the statevector components where the first qubit is $|0\rangle$ or $|1\rangle$ give us the class probabilities directly.
+We use angle encoding, where each feature x_k is encoded as a rotation angle on qubit k:
+
+```
+U(x) = tensor_product( Ry(x_k) ) for k = 1, ..., n
+```
+
+where Ry(theta) = [[cos(theta/2), -sin(theta/2)], [sin(theta/2), cos(theta/2)]] is the Y-rotation gate. Features are normalized to [0, pi] before encoding.
+
+For richer data encoding, we can apply the encoding circuit multiple times (data re-uploading), interleaving it with variational layers:
+
+```
+|psi> = W_L(theta_L) * U(x) * ... * W_1(theta_1) * U(x) |0...0>
+```
+
+### 2.3 Variational Circuit W(theta)
+
+The variational circuit consists of L layers, each containing:
+
+**Single-qubit rotations:**
+```
+R(theta) = Rz(theta_3) * Ry(theta_2) * Rz(theta_1)
+```
+applied to each qubit, providing full single-qubit rotational freedom (3 parameters per qubit per layer).
+
+**Entangling gates:**
+CNOT gates between adjacent qubits in a linear or circular topology:
+```
+CNOT(q_k, q_{k+1})  for k = 0, ..., n-2
+```
+
+The total number of trainable parameters is 3 * n * L (for L layers and n qubits).
+
+### 2.4 Cost Function and Optimization
+
+The cost function is the binary cross-entropy (or mean squared error) between predictions and labels:
+
+```
+C(theta) = (1/N) * sum_i [ (1 - y_i * f(x_i, theta))^2 ]
+```
+
+where f(x_i, theta) = <Z_0> is the expectation value for input x_i.
+
+We optimize theta using the parameter-shift rule, a quantum-native gradient estimation technique:
+
+```
+dC/d(theta_k) = [C(theta_k + pi/2) - C(theta_k - pi/2)] / 2
+```
+
+This requires 2 circuit evaluations per parameter per gradient step. In our classical simulation, we can also compute gradients via finite differences or automatic differentiation.
+
+### 2.5 Expressibility and Entangling Capability
+
+The power of a VQC depends on two properties:
+
+1. **Expressibility**: How uniformly the circuit can explore the space of quantum states. More layers and entangling gates increase expressibility.
+2. **Entangling capability**: The degree to which the circuit can create entanglement between qubits. This is essential for capturing correlations between features.
+
+A balance must be struck: too few layers lead to underfitting, while too many layers cause barren plateaus (vanishing gradients in the cost landscape).
+
+## 3. VQC vs Classical and Other Quantum Methods
+
+### 3.1 Comparison Table
+
+| Aspect | Classical NN | QSVM | VQC |
+|--------|-------------|------|-----|
+| Model type | Parameterized layers | Kernel-based | Parameterized quantum circuit |
+| Training | Backpropagation | Convex optimization | Parameter-shift rule |
+| Feature space | Fixed architecture | Quantum kernel | Learned quantum representation |
+| Parameters | O(d * h * L) | O(N^2) kernel matrix | O(n * L) rotations |
+| Scalability | Good | Limited by kernel matrix | Good (shallow circuits) |
+| NISQ compatibility | N/A | Requires deep circuits | Designed for NISQ |
+
+### 3.2 Advantages of VQC for Trading
+
+1. **Adaptive feature learning**: Unlike QSVM where the feature map is fixed, VQC learns the optimal quantum feature representation during training.
+2. **Shallow circuits**: VQC can achieve good performance with shallow circuits (few layers), making it suitable for noisy quantum hardware.
+3. **Scalable training**: Training cost scales with the number of parameters, not the size of the training set (unlike kernel methods).
+4. **Data re-uploading**: By re-encoding data between variational layers, VQC can approximate arbitrary functions (universal approximation).
 
 ## 4. Trading Application
 
-### 4.1 Binary Classification: Up/Down Prediction
+### 4.1 Market Regime Classification
 
-The most natural trading application of a VQC is predicting the direction of the next price movement. Given a set of technical features computed from historical OHLCV data, the VQC outputs the probability that the next candle will close higher than it opened.
+We classify market states into three regimes based on forward returns:
 
-**Feature Engineering Pipeline:**
-1. **Returns:** Log returns over different lookback periods (1, 5, 10 candles)
-2. **Volatility:** Rolling standard deviation of returns
-3. **Momentum:** Rate of change (ROC) and relative strength indicators
-4. **Volume:** Normalized volume changes
+- **Bull (+1)**: Forward return exceeds a positive threshold (e.g., +0.5%)
+- **Bear (-1)**: Forward return falls below a negative threshold (e.g., -0.5%)
+- **Sideways (0)**: Forward return within the threshold band
 
-Features are scaled to the range $[-\pi, \pi]$ for angle encoding, ensuring they map naturally to qubit rotation angles.
+For binary classification with VQC, we merge sideways and bear into a single class (-1).
 
-**Label Construction:**
-- Label = 1 if the next candle's close > current close (price goes up)
-- Label = 0 otherwise (price goes down or stays flat)
+### 4.2 Feature Engineering
 
-### 4.2 Multi-Class Regime Detection
+Our feature set for VQC includes:
 
-For more sophisticated applications, the VQC can be extended to multi-class classification by measuring multiple qubits. For example, a 2-qubit measurement yields four possible outcomes corresponding to four market regimes:
+1. **Log returns**: r_t = ln(P_t / P_{t-1}) capturing price momentum
+2. **Realized volatility**: Rolling standard deviation of returns
+3. **RSI-like momentum**: Ratio of average gains to average losses
+4. **Volume ratio**: Current volume relative to moving average volume
+5. **Price position**: Normalized position within recent high/low range
 
-| Outcome | Regime |
-|---------|--------|
-| $\|00\rangle$ | Low volatility, bearish |
-| $\|01\rangle$ | Low volatility, bullish |
-| $\|10\rangle$ | High volatility, bearish |
-| $\|11\rangle$ | High volatility, bullish |
+Features are normalized to [0, pi] for angle encoding into the quantum circuit.
 
-This enables regime-aware trading strategies that adapt position sizing and risk management to current market conditions.
+### 4.3 Trading Strategy
 
-## 5. Training
+The VQC output (expectation value of Z on first qubit) directly provides a trading signal:
 
-### 5.1 Hybrid Quantum-Classical Optimization
+- **Long signal**: f(x) > threshold (e.g., 0.0)
+- **Short/flat signal**: f(x) <= threshold
 
-VQC training follows a hybrid loop:
+The continuous output can also be used for position sizing: stronger signals lead to larger positions.
 
-1. **Forward pass:** Run the quantum circuit with current parameters $\theta$ to obtain predictions
-2. **Loss computation:** Calculate the cross-entropy loss on the classical computer
-3. **Gradient estimation:** Compute gradients of the loss with respect to $\theta$
-4. **Parameter update:** Use a classical optimizer (Adam, SGD) to update $\theta$
-5. **Repeat** until convergence
+## 5. Implementation Walkthrough
 
-This hybrid approach is essential because quantum circuits cannot perform backpropagation natively. Instead, gradients are estimated using the parameter shift rule.
+### 5.1 Project Structure
 
-### 5.2 Parameter Shift Rule
-
-The parameter shift rule provides exact analytical gradients for quantum circuits containing Pauli rotation gates. For a parameter $\theta_k$ appearing in a rotation gate, the gradient of an expectation value $f(\theta)$ is:
-
-$$\frac{\partial f}{\partial \theta_k} = \frac{f(\theta_k + \pi/2) - f(\theta_k - \pi/2)}{2}$$
-
-This requires two circuit evaluations per parameter. For $p$ parameters, the full gradient vector requires $2p$ circuit evaluations. While this is more expensive than classical backpropagation, it provides exact gradients (not estimates) and works natively with quantum hardware.
-
-In practice, for VQC training on financial data:
-- Each gradient step requires $2p$ forward passes through the quantum circuit
-- For a 4-qubit, 3-layer VQC with 24 parameters, this means 48 circuit evaluations per training step
-- On a simulator, this is fast; on real quantum hardware, batching and circuit optimization become important
-
-### 5.3 Avoiding Barren Plateaus
-
-Barren plateaus are a well-known challenge in VQC training: as the number of qubits grows, the gradient landscape can become exponentially flat, making optimization difficult. Strategies to mitigate this include:
-
-- **Shallow circuits:** Using fewer layers reduces the risk of barren plateaus
-- **Local cost functions:** Measuring only a subset of qubits rather than global observables
-- **Parameter initialization:** Starting parameters near zero or using structured initialization
-- **Layer-wise training:** Training one layer at a time, freezing previously trained layers
-
-For trading applications with small feature sets (4-8 features), barren plateaus are generally not a concern.
-
-## 6. Implementation Walkthrough
-
-Our Rust implementation provides a complete VQC framework with the following components:
-
-### 6.1 Statevector Simulator
-
-We implement a full statevector simulator that tracks the quantum state as a vector of $2^n$ complex amplitudes. Single-qubit gates are applied by computing the tensor product structure, and two-qubit gates (CNOT) are applied through controlled operations on the statevector.
-
-```rust
-// Initialize |00...0> state
-let mut statevector = vec![Complex::zero(); 1 << num_qubits];
-statevector[0] = Complex::one();
-
-// Apply RY gate to qubit i
-apply_ry(&mut statevector, qubit, angle);
-
-// Apply CNOT gate
-apply_cnot(&mut statevector, control, target);
+```
+191_variational_quantum_classifier/
+  rust/
+    Cargo.toml
+    src/
+      lib.rs              # Core VQC implementation
+    examples/
+      trading_example.rs  # Full trading pipeline
 ```
 
-### 6.2 VQC Structure
+### 5.2 Quantum State Simulation
 
-The VQC is structured as:
-1. **Angle encoding:** Apply RY rotations with feature values
-2. **Variational layers:** Alternate between RY/RZ rotations and CNOT entanglement
-3. **Measurement:** Extract probability of first qubit being |1>
+The quantum state is represented as a complex vector of dimension 2^n. Gates are applied by computing their matrix representation and multiplying with the state vector:
 
 ```rust
-let vqc = VQC::new(num_qubits, num_layers);
-let prob_class1 = vqc.forward(&features, &params);
+// Apply a single-qubit gate to qubit `target` in an n-qubit system
+fn apply_single_gate(state: &mut Vec<(f64, f64)>, gate: [[f64; 4]], target: usize, n_qubits: usize) {
+    // For each pair of amplitudes affected by the gate
+    // Compute new amplitudes using the 2x2 gate matrix
+}
 ```
 
-### 6.3 Training Loop
+### 5.3 Variational Circuit
 
-The training loop implements gradient descent with the parameter shift rule:
+Each layer of the variational circuit applies:
+1. Ry and Rz rotations with trainable parameters to each qubit
+2. CNOT gates between adjacent qubits for entanglement
 
 ```rust
-for epoch in 0..num_epochs {
-    let gradients = vqc.compute_gradients(&features, &labels, &params);
-    for i in 0..params.len() {
-        params[i] -= learning_rate * gradients[i];
+fn apply_variational_layer(state: &mut Vec<(f64, f64)>, params: &[f64], n_qubits: usize) {
+    // Single-qubit rotations: Rz * Ry * Rz per qubit (3 params each)
+    for q in 0..n_qubits {
+        apply_rz(state, params[3*q], q, n_qubits);
+        apply_ry(state, params[3*q + 1], q, n_qubits);
+        apply_rz(state, params[3*q + 2], q, n_qubits);
+    }
+    // Entangling CNOT ladder
+    for q in 0..n_qubits-1 {
+        apply_cnot(state, q, q+1, n_qubits);
     }
 }
 ```
 
-### 6.4 Bybit Data Integration
-
-We fetch real market data from the Bybit API:
+### 5.4 Training with Parameter-Shift Rule
 
 ```rust
-let candles = fetch_bybit_klines("BTCUSDT", "15", 500).await?;
-let (features, labels) = engineer_features(&candles);
+fn parameter_shift_gradient(params: &[f64], data: &[Vec<f64>], labels: &[f64]) -> Vec<f64> {
+    let mut grad = vec![0.0; params.len()];
+    for k in 0..params.len() {
+        let mut params_plus = params.to_vec();
+        let mut params_minus = params.to_vec();
+        params_plus[k] += PI / 2.0;
+        params_minus[k] -= PI / 2.0;
+        grad[k] = (cost(&params_plus, data, labels) - cost(&params_minus, data, labels)) / 2.0;
+    }
+    grad
+}
 ```
 
-The feature engineering pipeline computes returns, volatility, and momentum indicators, scales them appropriately, and constructs binary labels for price direction.
+### 5.5 Bybit Integration
 
-## 7. Bybit Data Integration
+Data is fetched from the Bybit public API:
 
-The implementation connects to the Bybit v5 public API to fetch historical kline (candlestick) data. The endpoint `https://api.bybit.com/v5/market/kline` provides OHLCV data for any trading pair and timeframe.
+```rust
+let url = format!(
+    "https://api.bybit.com/v5/market/kline?category=linear&symbol={}&interval={}&limit={}",
+    symbol, interval, limit
+);
+```
 
-**Data Flow:**
-1. Fetch raw OHLCV data from Bybit API
-2. Parse JSON response into structured candle data
-3. Compute technical features from the candle series
-4. Scale features to $[-\pi, \pi]$ for angle encoding
-5. Generate binary labels based on next-candle direction
-6. Split into training and test sets
+The response contains OHLCV candles parsed into structured data for feature engineering.
 
-**Feature Engineering Details:**
+## 6. Bybit Data Integration
 
-| Feature | Computation | Rationale |
-|---------|-------------|-----------|
-| Return (1-bar) | $\ln(C_t / C_{t-1})$ | Short-term momentum |
-| Return (5-bar) | $\ln(C_t / C_{t-5})$ | Medium-term trend |
-| Volatility | $\text{std}(\text{ret}_{t-9:t})$ | Risk regime indicator |
-| Volume change | $(V_t - V_{t-1}) / V_{t-1}$ | Participation signal |
+The Bybit API provides historical kline (candlestick) data for our VQC. We fetch BTCUSDT perpetual futures data at various timeframes.
 
-Features are normalized using min-max scaling to $[-\pi, \pi]$, which maps naturally to rotation angles in the quantum circuit. This normalization is critical because qubit rotations are periodic with period $2\pi$, and we want to use the full range of the rotation to maximize the circuit's discriminative power.
+Key considerations:
 
-## 8. Key Takeaways
+- **Rate limiting**: Bybit public endpoints have generous rate limits; we implement reasonable delays.
+- **Data quality**: We handle missing candles and verify timestamp continuity.
+- **Normalization**: Raw prices are converted to returns and indicators, then normalized to [0, pi] for quantum encoding.
+- **Temporal splitting**: Earlier data for training, later data for testing, to avoid look-ahead bias.
 
-1. **VQCs are hybrid models** that combine quantum circuit execution with classical optimization. They are well-suited for NISQ-era devices and can be simulated classically for small problem sizes.
+The pipeline:
+1. Fetch N candles of BTCUSDT from Bybit
+2. Compute features (returns, volatility, RSI, volume ratio, price position)
+3. Label each candle with a market regime
+4. Normalize features to [0, pi]
+5. Split into train/test sets
+6. Initialize VQC parameters randomly
+7. Train VQC using parameter-shift rule
+8. Predict on test set and evaluate accuracy
 
-2. **Angle encoding is practical** for trading features. With 4-8 engineered features, we need only 4-8 qubits, which is well within the capabilities of current quantum hardware and trivial to simulate.
+## 7. Key Takeaways
 
-3. **The parameter shift rule** enables exact gradient computation for quantum circuits, making gradient-based optimization feasible without requiring quantum backpropagation.
+1. **VQCs are hybrid quantum-classical models** that combine parameterized quantum circuits with classical optimization. They are the quantum analog of neural networks, with trainable rotation angles playing the role of weights.
 
-4. **For small feature sets**, VQCs have a comparable number of parameters to simple neural networks, but they explore the exponentially large Hilbert space, potentially learning different decision boundaries.
+2. **Data encoding is crucial**. Angle encoding maps features to qubit rotations, and data re-uploading between variational layers increases the model's expressiveness, enabling universal function approximation.
 
-5. **Barren plateaus** are the primary training challenge for VQCs, but for the small circuits used in trading applications (4-8 qubits, 2-4 layers), they are rarely problematic.
+3. **The parameter-shift rule** provides exact quantum gradients using only two circuit evaluations per parameter. This makes VQC training compatible with both quantum hardware and classical simulation.
 
-6. **Real-world performance** of VQCs on financial data is still an active research area. Current evidence suggests they perform comparably to classical models of similar complexity, with potential advantages in specific regimes.
+4. **Shallow circuits suffice** for many classification tasks. This is important for NISQ devices where circuit depth is limited by decoherence and gate errors.
 
-7. **The Rust implementation** provides a complete, self-contained VQC framework including statevector simulation, training, and Bybit data integration, suitable for experimentation and further development.
+5. **Market regime classification** benefits from VQC's ability to learn non-linear decision boundaries in quantum feature space. The adaptive nature of the variational circuit means the model can discover useful feature interactions during training.
 
-8. **Practical considerations:** VQCs should be viewed as part of a broader toolkit. For production trading, ensemble methods combining quantum and classical classifiers may offer the best risk-adjusted performance.
+6. **Barren plateaus** are a key challenge: for randomly initialized deep circuits, gradients can vanish exponentially with the number of qubits. Strategies to mitigate this include layer-wise training, identity initialization, and limiting circuit depth.
+
+7. **Classical simulation is tractable** for small qubit counts (2-4 qubits). Our Rust implementation simulates quantum circuits exactly, allowing full pipeline development and testing without quantum hardware.
+
+8. **Rust provides performance and safety** for the computationally intensive tasks of state vector simulation and gradient computation. The strong type system catches errors at compile time, and zero-cost abstractions keep performance high.
