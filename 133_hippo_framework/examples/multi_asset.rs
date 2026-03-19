@@ -31,8 +31,9 @@ fn main() {
         };
         let normalized: Vec<f64> = prices.iter().map(|&p| (p - mean) / std).collect();
 
-        // Run HiPPO
-        let history = hippo.process_sequence(&normalized, 1.0);
+        // Run HiPPO (use small dt for stability with large N)
+        let dt = 1.0 / (hippo.n as f64 + 1.0);
+        let history = hippo.process_sequence(&normalized, dt);
 
         // Analyze last coefficient state
         let last = &history[history.len() - 1];
