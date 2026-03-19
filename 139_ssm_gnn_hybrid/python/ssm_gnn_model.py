@@ -91,8 +91,8 @@ class DiagonalSSM:
         for t in range(seq_len):
             # State update: x = A_bar * x + B_bar * u_t
             x = A_bar * x + B_bar * u_proj[t:t+1, :]
-            # Output: y = C @ x + D * u_t
-            y = (self.C @ x).flatten() + self.D * u_proj[t]
+            # Output: y_m = Σ_s C[m,s] * x[s,m] + D_m * u_m
+            y = np.einsum('ms,sm->m', self.C, x) + self.D * u_proj[t]
             outputs.append(y)
 
         return np.array(outputs)  # (seq_len, d_model)

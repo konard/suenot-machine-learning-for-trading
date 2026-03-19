@@ -2,3 +2,4 @@
 
 pub mod bybit;
 pub mod features;
+pub mod stock;
