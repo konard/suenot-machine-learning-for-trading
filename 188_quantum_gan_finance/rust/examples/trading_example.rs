@@ -1,113 +1,127 @@
-use quantum_gan_finance::{
-    compare_distributions, compute_log_returns, fetch_bybit_klines, mean, skewness, std_dev,
-    variance, QuantumGAN,
-};
+//! Trading example: Train a Quantum GAN on Bybit BTCUSDT data
+//! and generate synthetic price paths.
 
-fn main() {
-    println!("=== Quantum GAN Finance: Trading Example ===\n");
+use quantum_gan_finance::*;
 
-    // --- Step 1: Fetch real BTCUSDT data from Bybit ---
-    println!("Step 1: Fetching BTCUSDT hourly data from Bybit...");
-    let closes = match fetch_bybit_klines("BTCUSDT", "60", 200) {
-        Ok(c) => {
-            println!("  Fetched {} close prices.", c.len());
-            c
+fn main() -> anyhow::Result<()> {
+    println!("=== Quantum GAN for Finance - Trading Example ===\n");
+
+    // ── Step 1: Fetch real data from Bybit ──
+    println!("Fetching BTCUSDT hourly klines from Bybit...");
+    let prices = match fetch_bybit_klines("BTCUSDT", "60", 200) {
+        Ok(p) => {
+            println!("Fetched {} price points", p.len());
+            p
         }
         Err(e) => {
-            eprintln!("  Failed to fetch data from Bybit: {}", e);
-            eprintln!("  Using synthetic fallback data for demonstration...");
-            generate_fallback_prices(200)
+            println!("Could not fetch from Bybit: {}. Using synthetic data.", e);
+            generate_synthetic_prices(200)
         }
     };
 
-    // --- Step 2: Compute log returns ---
-    println!("\nStep 2: Computing log returns...");
-    let returns = compute_log_returns(&closes);
-    println!("  Computed {} log returns.", returns.len());
+    // ── Step 2: Compute log returns ──
+    let returns = compute_log_returns(&prices);
+    println!("Computed {} log returns", returns.len());
 
-    if returns.is_empty() {
-        eprintln!("No valid returns. Exiting.");
-        return;
-    }
+    println!("\nReal data statistics:");
+    println!("  Mean:     {:.6}", mean(&returns));
+    println!("  Std Dev:  {:.6}", std_dev(&returns));
+    println!("  Skewness: {:.6}", skewness(&returns));
+    println!("  Kurtosis: {:.6}", kurtosis(&returns));
 
-    // Print real data statistics
-    println!("\n  Real data statistics:");
-    println!("    Mean:     {:.6}", mean(&returns));
-    println!("    Std Dev:  {:.6}", std_dev(&returns));
-    println!("    Variance: {:.6}", variance(&returns));
-    println!("    Skewness: {:.6}", skewness(&returns));
-
-    // --- Step 3: Set up Quantum GAN ---
-    let r_min = returns.iter().cloned().fold(f64::INFINITY, f64::min) * 1.5;
-    let r_max = returns.iter().cloned().fold(f64::NEG_INFINITY, f64::max) * 1.5;
-
-    let num_qubits = 4;
-    let num_layers = 3;
-    let epochs = 200;
-
+    // ── Step 3: Normalize returns for GAN training ──
+    let (normalized_returns, min_val, max_val) = normalize(&returns);
     println!(
-        "\nStep 3: Training Quantum GAN ({} qubits, {} layers)...",
-        num_qubits, num_layers
+        "\nNormalized returns to [0,1] (original range: [{:.6}, {:.6}])",
+        min_val, max_val
     );
-    println!("  Return range: [{:.6}, {:.6}]", r_min, r_max);
-    println!("  Number of bins: {}", 1 << num_qubits);
-    println!("  Training epochs: {}\n", epochs);
 
-    let mut qgan = QuantumGAN::new(num_qubits, num_layers, r_min, r_max);
-    let losses = qgan.train(&returns, epochs, 32);
+    // ── Step 4: Train Quantum GAN ──
+    println!("\nTraining Quantum GAN...");
+    println!("  Qubits: 3, Layers: 2");
+    println!("  Generator LR: 0.1, Discriminator LR: 0.01");
+    println!("  Epochs: 50, Batch size: 32\n");
 
-    // --- Step 4: Generate synthetic returns ---
-    let num_synthetic = returns.len();
+    let mut trainer = QGANTrainer::new(3, 2, 0.1, 0.01);
+    let losses = trainer.train(&normalized_returns, 50, 32);
+
+    println!("\nTraining complete!");
     println!(
-        "\nStep 4: Generating {} synthetic returns...",
-        num_synthetic
+        "Final generator loss: {:.4}",
+        losses.last().unwrap_or(&0.0)
     );
-    let synthetic = qgan.generate_returns(num_synthetic);
 
-    // --- Step 5: Compare distributions ---
-    println!("\nStep 5: Comparing real vs. generated distributions...");
-    compare_distributions(&returns, &synthetic);
+    // ── Step 5: Generate synthetic returns ──
+    let n_synthetic = returns.len();
+    let synthetic_normalized = trainer.generate(n_synthetic);
+    let synthetic_returns = denormalize(&synthetic_normalized, min_val, max_val);
 
-    // --- Step 6: Training convergence summary ---
-    println!("\n=== Training Convergence ===");
-    if let Some((first_d, first_g)) = losses.first() {
-        println!("  Initial  - D_loss: {:.4}, G_loss: {:.4}", first_d, first_g);
+    println!("\nSynthetic data statistics:");
+    println!("  Mean:     {:.6}", mean(&synthetic_returns));
+    println!("  Std Dev:  {:.6}", std_dev(&synthetic_returns));
+    println!("  Skewness: {:.6}", skewness(&synthetic_returns));
+    println!("  Kurtosis: {:.6}", kurtosis(&synthetic_returns));
+
+    // ── Step 6: Compare real vs synthetic ──
+    println!("\n=== Statistical Comparison ===");
+    println!(
+        "{:<12} {:>12} {:>12} {:>12}",
+        "Metric", "Real", "Synthetic", "Diff"
+    );
+    println!("{}", "-".repeat(50));
+
+    let metrics = [
+        ("Mean", mean(&returns), mean(&synthetic_returns)),
+        ("Std Dev", std_dev(&returns), std_dev(&synthetic_returns)),
+        ("Skewness", skewness(&returns), skewness(&synthetic_returns)),
+        ("Kurtosis", kurtosis(&returns), kurtosis(&synthetic_returns)),
+    ];
+
+    for (name, real_val, synth_val) in &metrics {
+        println!(
+            "{:<12} {:>12.6} {:>12.6} {:>12.6}",
+            name,
+            real_val,
+            synth_val,
+            (real_val - synth_val).abs()
+        );
     }
-    if let Some((last_d, last_g)) = losses.last() {
-        println!("  Final    - D_loss: {:.4}, G_loss: {:.4}", last_d, last_g);
+
+    // ── Step 7: Generate synthetic price path ──
+    println!("\n=== Synthetic Price Path (first 20 steps) ===");
+    let start_price = prices.last().copied().unwrap_or(50000.0);
+    let synthetic_path = generate_price_path(start_price, &synthetic_returns);
+
+    for (i, price) in synthetic_path.iter().take(20).enumerate() {
+        println!("  Step {:>3}: ${:.2}", i, price);
     }
 
-    // --- Step 7: Example generated samples ---
-    println!("\n=== Sample Generated Returns ===");
-    let display_count = 10.min(synthetic.len());
-    for (i, &r) in synthetic.iter().take(display_count).enumerate() {
-        println!("  Sample {:2}: {:.6} ({:.2}%)", i + 1, r, r * 100.0);
-    }
-
-    println!("\n=== Quantum GAN Finance Example Complete ===");
+    println!("\nDone!");
+    Ok(())
 }
 
-/// Generate fallback price data when Bybit API is unavailable.
-/// Produces a random walk with realistic BTC-like volatility.
-fn generate_fallback_prices(n: usize) -> Vec<f64> {
+/// Generate a price path from returns starting at initial_price.
+fn generate_price_path(initial_price: f64, returns: &[f64]) -> Vec<f64> {
+    let mut path = Vec::with_capacity(returns.len() + 1);
+    path.push(initial_price);
+    for r in returns {
+        let prev = *path.last().unwrap();
+        path.push(prev * r.exp());
+    }
+    path
+}
+
+/// Generate synthetic prices for fallback when API is unavailable.
+fn generate_synthetic_prices(n: usize) -> Vec<f64> {
     use rand::Rng;
     let mut rng = rand::thread_rng();
     let mut prices = Vec::with_capacity(n);
     let mut price = 50000.0_f64;
     prices.push(price);
-
     for _ in 1..n {
-        // BTC hourly returns: roughly mean=0, std=0.005
-        let ret: f64 = rng.gen::<f64>() * 0.01 - 0.005;
-        // Add occasional larger moves for realistic tails
-        let tail_event: f64 = if rng.gen::<f64>() < 0.05 {
-            (rng.gen::<f64>() - 0.5) * 0.04
-        } else {
-            0.0
-        };
-        price *= (ret + tail_event).exp();
+        let ret = rng.gen::<f64>() * 0.04 - 0.02; // uniform in [-0.02, 0.02]
+        price *= (1.0 + ret);
         prices.push(price);
     }
-
     prices
 }
