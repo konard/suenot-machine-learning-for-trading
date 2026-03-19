@@ -1,262 +1,182 @@
 //! # VQE Portfolio Optimization - Trading Example
 //!
-//! Fetches real market data from Bybit for BTC, ETH, and SOL,
-//! computes covariance matrix from returns, runs VQE to find
-//! the optimal portfolio, and compares with classical solutions.
+//! Fetches BTC and ETH prices from Bybit, formulates portfolio as QUBO,
+//! runs VQE-inspired classical optimization, and compares with benchmarks.
 
-use ndarray::{Array1, Array2};
 use vqe_portfolio_optimization::*;
 
-/// Fallback: generate synthetic data if the API is unavailable.
-fn synthetic_data() -> (Array2<f64>, Array1<f64>) {
-    println!("Using synthetic market data as fallback...\n");
+fn main() -> anyhow::Result<()> {
+    println!("=============================================================");
+    println!("  VQE Portfolio Optimization - Bybit Crypto Portfolio");
+    println!("=============================================================\n");
 
-    // Realistic crypto covariance matrix (annualized, daily scale ~ /252)
-    let cov = Array2::from_shape_vec(
-        (3, 3),
-        vec![
-            0.0012, 0.0009, 0.0010, // BTC
-            0.0009, 0.0018, 0.0012, // ETH
-            0.0010, 0.0012, 0.0025, // SOL
-        ],
-    )
-    .unwrap();
+    // Asset configuration
+    let symbols = vec!["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT"];
+    let asset_names = vec!["BTC", "ETH", "SOL", "BNB"];
+    let n_assets = symbols.len();
 
-    // Expected daily returns
-    let means = Array1::from(vec![0.0003, 0.0005, 0.0007]);
+    // Try to fetch real data from Bybit, fall back to synthetic data
+    println!("Fetching price data from Bybit...\n");
+    let all_returns = match fetch_all_returns(&symbols) {
+        Ok(returns) => {
+            println!("Successfully fetched real market data.\n");
+            returns
+        }
+        Err(e) => {
+            println!("Could not fetch Bybit data: {}. Using synthetic data.\n", e);
+            generate_synthetic_returns(n_assets, 30)
+        }
+    };
 
-    (cov, means)
+    // Compute statistics
+    let (mean_returns, cov_matrix) = compute_statistics(&all_returns);
+
+    println!("--- Asset Statistics ---");
+    for (i, name) in asset_names.iter().enumerate() {
+        println!(
+            "  {}: mean daily return = {:.6}, volatility = {:.6}",
+            name,
+            mean_returns[i],
+            cov_matrix[[i, i]].sqrt()
+        );
+    }
+    println!();
+
+    // Configuration
+    let bits_per_asset = 2;
+    let risk_aversion = 0.5;
+    let penalty = 2.0;
+    let n_layers = 2;
+    let max_iterations = 300;
+
+    // =========================================================================
+    // Strategy 1: Equal Weight
+    // =========================================================================
+    let equal_weights = vec![1.0 / n_assets as f64; n_assets];
+    let eq_ret = portfolio_return(&equal_weights, &mean_returns);
+    let eq_risk = portfolio_risk(&equal_weights, &cov_matrix);
+    let eq_sharpe = sharpe_ratio(&equal_weights, &mean_returns, &cov_matrix);
+
+    println!("=== Strategy 1: Equal Weight ===");
+    print_weights(&asset_names, &equal_weights);
+    println!("  Expected daily return: {:.6}", eq_ret);
+    println!("  Daily risk (std dev):  {:.6}", eq_risk);
+    println!("  Sharpe ratio:          {:.4}", eq_sharpe);
+    println!();
+
+    // =========================================================================
+    // Strategy 2: Classical Mean-Variance
+    // =========================================================================
+    let mv_weights = classical_mean_variance(&mean_returns, &cov_matrix, risk_aversion);
+    let mv_ret = portfolio_return(&mv_weights, &mean_returns);
+    let mv_risk = portfolio_risk(&mv_weights, &cov_matrix);
+    let mv_sharpe = sharpe_ratio(&mv_weights, &mean_returns, &cov_matrix);
+
+    println!("=== Strategy 2: Classical Mean-Variance ===");
+    print_weights(&asset_names, &mv_weights);
+    println!("  Expected daily return: {:.6}", mv_ret);
+    println!("  Daily risk (std dev):  {:.6}", mv_risk);
+    println!("  Sharpe ratio:          {:.4}", mv_sharpe);
+    println!();
+
+    // =========================================================================
+    // Strategy 3: VQE Quantum-Inspired (Discrete)
+    // =========================================================================
+    println!("=== Strategy 3: VQE Quantum-Inspired ===");
+    println!("  Running VQE optimization ({} qubits, {} layers, {} iterations)...",
+        n_assets * bits_per_asset, n_layers, max_iterations);
+
+    let result = run_portfolio_optimization(
+        &mean_returns,
+        &cov_matrix,
+        n_assets,
+        bits_per_asset,
+        risk_aversion,
+        penalty,
+        n_layers,
+        max_iterations,
+    );
+
+    let vqe_weights = &result.weights;
+    let vqe_ret = portfolio_return(vqe_weights, &mean_returns);
+    let vqe_risk = portfolio_risk(vqe_weights, &cov_matrix);
+    let vqe_sharpe = sharpe_ratio(vqe_weights, &mean_returns, &cov_matrix);
+
+    println!("  Converged after {} iterations", result.iterations);
+    println!("  Optimal energy: {:.6}", result.optimal_energy);
+    println!("  Optimal bitstring: {:0width$b}", result.optimal_bitstring, width = n_assets * bits_per_asset);
+    print_weights(&asset_names, vqe_weights);
+    println!("  Expected daily return: {:.6}", vqe_ret);
+    println!("  Daily risk (std dev):  {:.6}", vqe_risk);
+    println!("  Sharpe ratio:          {:.4}", vqe_sharpe);
+    println!();
+
+    // =========================================================================
+    // Comparison
+    // =========================================================================
+    println!("=== Comparison Summary ===");
+    println!("{:<25} {:>10} {:>10} {:>10}", "Strategy", "Return", "Risk", "Sharpe");
+    println!("{:-<25} {:-^10} {:-^10} {:-^10}", "", "", "", "");
+    println!("{:<25} {:>10.6} {:>10.6} {:>10.4}", "Equal Weight", eq_ret, eq_risk, eq_sharpe);
+    println!("{:<25} {:>10.6} {:>10.6} {:>10.4}", "Classical MV", mv_ret, mv_risk, mv_sharpe);
+    println!("{:<25} {:>10.6} {:>10.6} {:>10.4}", "VQE Quantum-Inspired", vqe_ret, vqe_risk, vqe_sharpe);
+    println!();
+
+    // Highlight improvements
+    if vqe_sharpe > eq_sharpe {
+        println!(
+            "VQE improved Sharpe ratio by {:.2}% over equal weight.",
+            (vqe_sharpe / eq_sharpe - 1.0) * 100.0
+        );
+    }
+
+    println!("\nNote: VQE uses discrete {}-bit weights (multiples of 1/{}).",
+        bits_per_asset, (1 << bits_per_asset) - 1);
+    println!("This naturally regularizes the portfolio, avoiding extreme allocations.");
+
+    Ok(())
 }
 
-fn main() {
-    println!("==========================================================");
-    println!("  VQE Portfolio Optimization - Crypto Trading Example");
-    println!("==========================================================\n");
-
-    let asset_names = vec!["BTCUSDT", "ETHUSDT", "SOLUSDT"];
-    let symbols = vec!["BTCUSDT", "ETHUSDT", "SOLUSDT"];
-
-    // ---------------------------------------------------------------
-    // Step 1: Fetch market data from Bybit
-    // ---------------------------------------------------------------
-    println!("Step 1: Fetching market data from Bybit...\n");
-
-    let mut all_returns: Vec<Vec<f64>> = Vec::new();
-    let mut fetch_ok = true;
-
-    for symbol in &symbols {
-        match fetch_bybit_klines(symbol, "D", 100) {
-            Ok(prices) => {
-                println!(
-                    "  {} : {} candles fetched, latest close = {:.2}",
-                    symbol,
-                    prices.len(),
-                    prices.last().unwrap_or(&0.0)
-                );
-                let rets = compute_log_returns(&prices);
-                all_returns.push(rets);
-            }
-            Err(e) => {
-                println!("  {} : Failed to fetch ({}).", symbol, e);
-                fetch_ok = false;
-                break;
-            }
+/// Fetch returns for all symbols from Bybit.
+fn fetch_all_returns(symbols: &[&str]) -> anyhow::Result<Vec<Vec<f64>>> {
+    let mut all_returns = Vec::new();
+    for symbol in symbols {
+        let prices = fetch_bybit_klines(symbol, "D", 60)?;
+        if prices.len() < 10 {
+            anyhow::bail!("Insufficient price data for {}", symbol);
         }
+        let returns = compute_log_returns(&prices);
+        all_returns.push(returns);
     }
+    Ok(all_returns)
+}
 
-    let (cov_matrix, expected_returns) = if fetch_ok && !all_returns.is_empty() {
-        // Trim all return series to the same length
-        let min_len = all_returns.iter().map(|r| r.len()).min().unwrap_or(0);
-        if min_len < 10 {
-            println!("\n  Not enough data points. Falling back to synthetic data.");
-            synthetic_data()
-        } else {
-            let trimmed: Vec<Vec<f64>> = all_returns
-                .iter()
-                .map(|r| r[r.len() - min_len..].to_vec())
-                .collect();
-            println!("\n  Using {} return observations.", min_len);
-            compute_covariance_and_means(&trimmed)
-        }
-    } else {
-        synthetic_data()
-    };
+/// Generate synthetic return data for testing.
+fn generate_synthetic_returns(n_assets: usize, n_days: usize) -> Vec<Vec<f64>> {
+    use rand::Rng;
+    let mut rng = rand::thread_rng();
 
-    // ---------------------------------------------------------------
-    // Step 2: Display covariance matrix
-    // ---------------------------------------------------------------
-    let names_ref: Vec<&str> = asset_names.iter().map(|s| s.as_ref()).collect();
-    print_covariance_matrix(&names_ref, &cov_matrix);
+    // Realistic daily return parameters for crypto assets
+    let means = [0.001, 0.0015, 0.002, 0.0008]; // BTC, ETH, SOL, BNB
+    let vols = [0.03, 0.04, 0.06, 0.035];
 
-    println!("\nExpected Daily Returns:");
-    for (i, name) in asset_names.iter().enumerate() {
-        println!("  {:<12} {:>10.6}", name, expected_returns[i]);
-    }
-
-    // ---------------------------------------------------------------
-    // Step 3: Build QUBO matrix
-    // ---------------------------------------------------------------
-    println!("\nStep 3: Building QUBO matrix...\n");
-
-    let n_assets = asset_names.len();
-    let k = 2; // Select 2 out of 3 assets
-    let lambda_risk = 1.0;
-    let lambda_return = 100.0; // Scale up to make returns significant
-    let lambda_budget = 2.0;
-
-    let qubo = build_qubo_matrix(
-        &cov_matrix,
-        &expected_returns,
-        k,
-        lambda_risk,
-        lambda_return,
-        lambda_budget,
-    );
-
-    println!("QUBO Matrix ({}x{}):", n_assets, n_assets);
+    let mut all_returns = Vec::new();
     for i in 0..n_assets {
-        for j in 0..n_assets {
-            print!("{:>10.4}", qubo[[i, j]]);
-        }
-        println!();
+        let returns: Vec<f64> = (0..n_days)
+            .map(|_| {
+                let z: f64 = rng.gen_range(-3.0..3.0);
+                means[i % means.len()] + vols[i % vols.len()] * z
+            })
+            .collect();
+        all_returns.push(returns);
     }
+    all_returns
+}
 
-    // ---------------------------------------------------------------
-    // Step 4: Brute-force classical solution
-    // ---------------------------------------------------------------
-    println!("\nStep 4: Classical brute-force solution...\n");
-
-    let (bf_bits, bf_cost) = brute_force_solve(&qubo, n_assets);
-    println!("  Brute-force optimal bits: {:?}", bf_bits);
-    println!("  Brute-force QUBO cost:    {:.6}", bf_cost);
-
-    let bf_n_selected = bf_bits.iter().filter(|&&b| b).count().max(1);
-    let bf_weights: Vec<f64> = bf_bits
-        .iter()
-        .map(|&b| if b { 1.0 / bf_n_selected as f64 } else { 0.0 })
-        .collect();
-    print_portfolio(&names_ref, &bf_weights);
-
-    let (bf_ret, bf_var) =
-        classical_equal_weight_portfolio(&cov_matrix, &expected_returns, &bf_bits);
-    println!(
-        "  Expected return: {:.6}, Variance: {:.6}, Sharpe (daily): {:.4}",
-        bf_ret,
-        bf_var,
-        if bf_var > 0.0 {
-            bf_ret / bf_var.sqrt()
-        } else {
-            0.0
-        }
-    );
-
-    // ---------------------------------------------------------------
-    // Step 5: Classical best-subset search
-    // ---------------------------------------------------------------
-    println!("\nStep 5: Classical best-subset (select {} of {})...\n", k, n_assets);
-
-    let (cl_bits, cl_ret, cl_var) = classical_best_subset(
-        &cov_matrix,
-        &expected_returns,
-        n_assets,
-        k,
-        lambda_risk,
-        lambda_return,
-    );
-    let cl_weights: Vec<f64> = cl_bits
-        .iter()
-        .map(|&b| if b { 1.0 / k as f64 } else { 0.0 })
-        .collect();
-    println!("  Best classical subset: {:?}", cl_bits);
-    print_portfolio(&names_ref, &cl_weights);
-    println!(
-        "  Expected return: {:.6}, Variance: {:.6}, Sharpe (daily): {:.4}",
-        cl_ret,
-        cl_var,
-        if cl_var > 0.0 {
-            cl_ret / cl_var.sqrt()
-        } else {
-            0.0
-        }
-    );
-
-    // ---------------------------------------------------------------
-    // Step 6: VQE optimization
-    // ---------------------------------------------------------------
-    println!("\nStep 6: Running VQE optimization...\n");
-
-    let config = VqeConfig {
-        n_qubits: n_assets,
-        n_layers: 3,
-        n_restarts: 10,
-        n_iterations: 200,
-        perturbation_size: 0.3,
-        n_perturbations: 10,
-    };
-
-    println!(
-        "  Config: {} qubits, {} layers, {} restarts, {} iterations",
-        config.n_qubits, config.n_layers, config.n_restarts, config.n_iterations
-    );
-
-    let result = run_vqe(&qubo, &config);
-
-    println!("\n  VQE optimal energy:    {:.6}", result.optimal_energy);
-    println!("  VQE optimal portfolio: {:?}", result.optimal_portfolio);
-    print_portfolio(&names_ref, &result.portfolio_weights);
-
-    let (vqe_ret, vqe_var) = classical_equal_weight_portfolio(
-        &cov_matrix,
-        &expected_returns,
-        &result.optimal_portfolio,
-    );
-    println!(
-        "  Expected return: {:.6}, Variance: {:.6}, Sharpe (daily): {:.4}",
-        vqe_ret,
-        vqe_var,
-        if vqe_var > 0.0 {
-            vqe_ret / vqe_var.sqrt()
-        } else {
-            0.0
-        }
-    );
-
-    // ---------------------------------------------------------------
-    // Step 7: Comparison summary
-    // ---------------------------------------------------------------
-    println!("\n==========================================================");
-    println!("  Comparison Summary");
-    println!("==========================================================\n");
-    println!(
-        "  {:>20} {:>12} {:>12} {:>12}",
-        "Method", "Return", "Variance", "QUBO Cost"
-    );
-    println!("  {:-<58}", "");
-    println!(
-        "  {:>20} {:>12.6} {:>12.6} {:>12.6}",
-        "Brute-force", bf_ret, bf_var, bf_cost
-    );
-    println!(
-        "  {:>20} {:>12.6} {:>12.6} {:>12.6}",
-        "Classical subset",
-        cl_ret,
-        cl_var,
-        qubo_cost(&qubo, &cl_bits)
-    );
-    println!(
-        "  {:>20} {:>12.6} {:>12.6} {:>12.6}",
-        "VQE", vqe_ret, vqe_var, result.optimal_energy
-    );
-
-    println!("\n  VQE vs Brute-force energy gap: {:.6}", result.optimal_energy - bf_cost);
-
-    if (result.optimal_energy - bf_cost).abs() < 1.0 {
-        println!("  -> VQE found a near-optimal solution!");
-    } else {
-        println!("  -> VQE solution has room for improvement. Try more restarts/layers.");
+/// Print portfolio weights nicely.
+fn print_weights(names: &[&str], weights: &[f64]) {
+    println!("  Weights:");
+    for (name, w) in names.iter().zip(weights.iter()) {
+        println!("    {}: {:.4} ({:.1}%)", name, w, w * 100.0);
     }
-
-    println!("\n==========================================================");
-    println!("  Done.");
-    println!("==========================================================");
 }
