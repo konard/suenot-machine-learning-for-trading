@@ -1,0 +1,26 @@
+# VAE Volatility Surface - Python Dependencies
+# ==============================================
+# Install with: pip install -r requirements.txt
+
+# Core Data Science Libraries
+numpy>=1.21.0
+scipy>=1.7.0
+
+# Deep Learning Framework
+torch>=1.10.0
+
+# HTTP Requests (for Bybit API)
+requests>=2.28.0
+
+# Visualization
+matplotlib>=3.5.0
+
+# Progress Bars
+tqdm>=4.64.0
+
+# Typing Extensions (for older Python versions)
+typing-extensions>=4.0.0
+
+# Development Dependencies (optional)
+# pytest>=7.0.0
+# pytest-cov>=3.0.0
