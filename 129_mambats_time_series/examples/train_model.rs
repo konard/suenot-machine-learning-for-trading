@@ -11,7 +11,6 @@ use indicatif::{ProgressBar, ProgressStyle};
 use mambats_time_series::{
     BybitClient, Interval,
     prepare_features,
-    data::features::normalize_features,
     data::processor::{DataProcessor, TimeSeriesDataset, remove_nan_rows},
 };
 use mambats_time_series::model::mambats::{MambaTS, MambaTSConfig};
@@ -134,7 +133,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{:-<50}", "");
 
     let epochs = 5;
-    let batch_size = 32;
+    let _batch_size = 32;
 
     let pb = ProgressBar::new(epochs as u64);
     pb.set_style(
