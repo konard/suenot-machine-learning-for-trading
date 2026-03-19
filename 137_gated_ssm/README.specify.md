@@ -17,7 +17,7 @@ Gating mechanisms в state space models для selective processing.
 - Теоретическое описание метода
 - Python реализация с PyTorch
 - Rust реализация для production
-- Jupyter notebooks с примерами
+- Примеры на Rust (examples/)
 - Бэктестинг framework
 
 ### Метрики
@@ -34,39 +34,57 @@ Gating mechanisms в state space models для selective processing.
    - Год: 2022
 
 ## Данные
-- Yahoo Finance / yfinance
-- Binance API для криптовалют
-- LOBSTER для order book data
-- Kaggle финансовые датасеты
+- Yahoo Finance / yfinance (акции)
+- Bybit API (криптовалюты: BTCUSDT, ETHUSDT)
 
 ## Реализация
 
 ### Python
-- PyTorch / TensorFlow
+- PyTorch (DiagonalSSMLayer, GatedSSMBlock, GatedSSMModel)
 - NumPy, Pandas
-- scikit-learn
-- Backtrader / Zipline
+- requests (Bybit API)
+- yfinance (фондовый рынок)
 
 ### Rust
-- ndarray
-- polars
-- burn / candle
+- tokio (async runtime)
+- reqwest (HTTP client для Bybit API)
+- serde / serde_json
+- statrs (статистика)
 
 ## Структура
 ```
 137_gated_ssm/
-├── README.specify.md
-├── README.md
-├── docs/
-│   └── ru/
-│       └── theory.md
+├── README.md                  # Полная документация (English)
+├── README.ru.md               # Русский перевод
+├── README.specify.md          # Спецификация (этот файл)
+├── readme.simple.md           # Упрощённое объяснение (English)
+├── readme.simple.ru.md        # Упрощённое объяснение (Russian)
+├── Cargo.toml                 # Конфигурация Rust
 ├── python/
-│   ├── model.py
-│   ├── train.py
-│   ├── backtest.py
-│   └── notebooks/
-│       └── example.ipynb
-└── rust/
-    └── src/
-        └── lib.rs
+│   ├── __init__.py
+│   ├── model.py               # PyTorch модель Gated SSM
+│   ├── data_loader.py         # Загрузка данных (Bybit + yfinance)
+│   ├── backtest.py            # Бэктестинг
+│   └── requirements.txt       # Python зависимости
+├── src/
+│   ├── lib.rs                 # Rust библиотека
+│   ├── model/
+│   │   ├── mod.rs
+│   │   ├── ssm.rs             # Diagonal SSM
+│   │   └── gated_ssm.rs       # Gated SSM block + model
+│   ├── data/
+│   │   ├── mod.rs
+│   │   ├── bybit.rs           # Bybit API client
+│   │   └── features.rs        # Feature engineering
+│   ├── trading/
+│   │   ├── mod.rs
+│   │   ├── signals.rs         # Торговые сигналы
+│   │   └── strategy.rs        # Торговая стратегия
+│   └── backtest/
+│       ├── mod.rs
+│       └── engine.rs          # Движок бэктестинга
+└── examples/
+    ├── basic_gated_ssm.rs     # Базовый пример
+    ├── crypto_trading.rs      # Торговля криптовалютами
+    └── backtest_strategy.rs   # Бэктестинг стратегии
 ```
